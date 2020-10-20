@@ -1,0 +1,19 @@
+minimum_cumulusci_version: '3.1.2'
+project:
+    name: salesforce-timesheet
+    package:
+        name:  salesforce-timesheet
+        api_version: '47.0'
+    source_format: sfdx
+
+tasks:
+    robot:
+        options:
+            suites: robot/salesforce-timesheet/tests
+            options:
+                outputdir: robot/salesforce-timesheet/results
+
+    robot_testdoc:
+        options:
+            path: robot/salesforce-timesheet/tests
+            output: robot/salesforce-timesheet/doc/salesforce-timesheet_tests.html

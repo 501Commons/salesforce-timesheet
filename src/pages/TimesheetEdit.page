@@ -1,0 +1,791 @@
+<apex:page controller="GW_CTRL_Timesheet" standardStylesheets="false" > 
+
+	
+
+<script type="text/javascript">
+    var j$ = jQuery.noConflict();
+    
+    var listAccounts = null; // our cached list of all accounts that have projects.
+    var listProjects = null; // our cached list of Projects for the current Account
+    var accountIdForProjectsCache = null; // the account we cached projects for.
+    var listTasks = null; // our cached list of Tasks
+    var listPhases = null;
+    var projectIdForTasksCache = null; // the project we cached tasks for.
+    var listCommonTasks = null; // our cached list of common tasks.
+    	
+
+	/*******************************************************************************************************
+	* this function is called when the page loads
+	********************************************************************************************************/
+    j$(function() {
+    
+    	/*******************************************************************************************************
+		* Setup mode switching
+		*******************************************************************************************************/
+		j$('.pane-tab a').click( function () {
+			
+			var myid = j$(this).attr('href');
+			if (myid == '#mode-planning') {
+				gwTimeSheet.setCurrentMode('Planning');
+			} else {
+				gwTimeSheet.setCurrentMode('Actual');
+			}
+			
+			return false;
+		});
+		
+			
+			
+   	 	
+		/*******************************************************************************************************
+   	 	* setup the autocomplete textboxes
+		*******************************************************************************************************/
+		j$(".clsCombo").autocomplete({
+			minLength: 0,
+			delay: 0,
+
+		   	// focus called when the user hilights an item by arrowing or mousing over the list 
+		   	// we needed to override this, otherwise the Id was displayed in the textbox.
+		   	focus: function(event, ui) {
+		   		j$(this).val(ui.item.label);
+		   		return false;
+		   	},
+	   	});
+				   	
+		/*******************************************************************************************************
+		* specify the specific fill function for Accounts
+		*******************************************************************************************************/
+		j$("#txtAccounts").autocomplete("option", "source",
+			function(request, response) {
+				if (listAccounts != null) {
+					fillAndMatchAccountsCombo(listAccounts, request, response);
+				} else {			
+	       			j$('#txtAccounts').addClass('clsWaitRight');	        			
+				var subID = j$('#txtSubID').val();
+					GW_CTRL_Timesheet.getListAccounts('', subID, function(result, event) {
+						j$('#txtAccounts').removeClass('clsWaitRight');	        								
+		        		if (event.type == 'exception') {
+		        			alert(event.message);
+		        		} else {
+		        			if (result != null) {
+		        				listAccounts = result;
+								fillAndMatchAccountsCombo(listAccounts, request, response);
+			        		}
+		        		}
+			   		}, {escape:false});		   		
+		   		}
+		   	}
+		);	
+		
+		/*******************************************************************************************************
+		* given the list of accounts, what is being searched for, and the response object,
+		* fill in the response with the combo's items that match.
+		*******************************************************************************************************/
+		function fillAndMatchAccountsCombo(listAccs, request, response) {
+			var strSearch = request.term.toLowerCase();		
+ 			var isMatch = false;
+     		response(j$.map(listAccs, function(item) {
+     			var strLower = item.Name.toLowerCase();
+   				if (strLower.indexOf(strSearch) >= 0) {
+	   				// if we find the exact match, get its formal text and id.
+	   				// ideally, we'd select it, but I couldn't figure out how!
+	   				if (strLower == strSearch) {
+	   					j$("#txtAccounts").val(item.Name).data('Id', item.Id);
+	   					isMatch = true;
+	   				}
+   					return {label: item.Name, value: item.Id}
+   				}
+   			}));
+
+			// if we don't find a match for a real search, clear all the combos.
+			if (!isMatch && strSearch != '') {
+     			j$("#txtAccounts").data('Id', null);
+		   		j$('#txtProjects').val(null).data('Id', null).data('isAdHoc', false);
+				//IsBillableDisplay(false, false);				
+		   		j$('#txtTasks').val(null).data('Id', null);
+			}	        														   
+		}
+
+		/*******************************************************************************************************
+		* specify the select event for Accounts, so it can invalidate the other combos.
+		*******************************************************************************************************/
+		j$('#txtAccounts').autocomplete("option", "select",
+			function(event, ui) {
+				var prevId = j$(this).data('Id');
+				j$(this).val(ui.item.label).data('Id', ui.item.value);
+		   		if (prevId != ui.item.value) {		   		
+			   		j$('#txtProjects').val(null).data('Id', null).data('isAdHoc', false);
+					//IsBillableDisplay(false, false);				
+			   		j$('#txtTasks').val(null).data('Id', null);
+			   	}
+		   		return false;		   		 
+		   	}
+		);
+		   			 
+		/*******************************************************************************************************
+		* specify the specific fill function for Projects
+		*******************************************************************************************************/
+		j$("#txtProjects").autocomplete("option", "source",
+			function(request, response) {
+				var accountId = j$('#txtAccounts').data('Id');
+				if (accountId == null) {
+					return;
+				}
+				if (listProjects != null && accountId == accountIdForProjectsCache) {
+       				fillAndMatchProjectsCombo(listProjects, request, response);				
+				} else {
+	       			  j$('#txtProjects').addClass('clsWaitRight');	        			
+  				  var subID = j$('#txtSubID').val();								
+				  GW_CTRL_Timesheet.getListOppProjects(accountId, '', subID, function(result, event) {
+		       		  j$('#txtProjects').removeClass('clsWaitRight');	        			
+		        		if (event.type == 'exception') {
+		        			alert(event.message);
+		        		} else {
+		        			if (result != null) {
+		        				listProjects = result;
+		        				accountIdForProjectsCache = accountId;
+		        				fillAndMatchProjectsCombo(listProjects, request, response);
+							}	        														   
+		        		}
+			   		}, {escape:false});
+			   	}		   		
+		   	}
+		);
+		
+		/*******************************************************************************************************
+		* populate the Project Phase select.
+		*******************************************************************************************************/
+		GW_CTRL_Timesheet.getProjectPhases(function(result, event) {			
+	    	if (event.type == 'exception') {
+	        	alert(event.message);
+	        } else {
+	        	if (result != null) {
+	        		listPhases = result;	
+	        		j$("#txtPhase").autocomplete("option", "source", listPhases);
+				}	        														   
+	        }
+		});
+		j$('#txtPhase').change( function () {
+			
+			var val = j$(this).val();
+			
+			if (jQuery.inArray(val, listPhases) < 0) {
+				j$(this).val('');
+			}
+			
+		});
+		   	
+		/*******************************************************************************************************
+		* given the list of projects, what is being searched for, and the response object,
+		* fill in the response with the combo's items that match.
+		*******************************************************************************************************/
+		function fillAndMatchProjectsCombo(listProjs, request, response) {
+			var strSearch = request.term.toLowerCase();		
+ 			var isMatch = false;
+     		response(j$.map(listProjs, function(item) {
+     			// special case AdHoc Project
+     			if (item.Id == null) item.Id = item.Name;
+     			
+     			var strLower = item.Name.toLowerCase();
+   				if (strLower.indexOf(strSearch) >= 0) {
+	   				// if we find the exact match, get its formal text and id.
+	   				// ideally, we'd select it, but I couldn't figure out how!
+	   				if (strLower == strSearch) {
+	   					j$("#txtProjects").val(item.Name).data('Id', item.Id).data('isAdHoc', item.Project_Category__c == 'Ad Hoc');
+	   					isMatch = true;
+	   				}
+       				var strLabel = item.Name;
+       				
+       				return {label: strLabel, value: item.Id, isAdHoc: item.Project_Category__c == 'Ad Hoc'}
+   				}
+   			}));
+
+			// if we don't find a match for a real search, clear all the combos.
+			if (!isMatch && strSearch != '') {
+		   		j$('#txtProjects').data('Id', null).data('isAdHoc', false);
+		   		j$('#txtTasks').val(null).data('Id', null);
+			}	        														   
+		}
+
+		/*******************************************************************************************************
+		* specify the select event for Projects, so it can invalidate the tasks combo.
+		*******************************************************************************************************/
+		j$('#txtProjects').autocomplete("option", "select",
+			function(event, ui) {
+				var prevId = j$(this).data('Id');
+				j$(this).val(ui.item.label).data('Id', ui.item.value).data('isAdHoc', ui.item.isAdHoc);
+				//IsBillableDisplay(ui.item.isAdHoc, ui.item.isAdHoc);				
+		   		if (prevId != ui.item.value) {		   		
+			   		j$('#txtTasks').val(null).data('Id', null);
+			   	}
+		   		return false;		   		 
+		   	}
+		);
+
+		/*******************************************************************************************************
+		* specify the specific fill function for Tasks
+		*******************************************************************************************************/
+		j$("#txtTasks").autocomplete("option", "source",
+			function(request, response) {
+				var projectId = j$('#txtProjects').data('Id');
+				var isAdHoc = j$('#txtProjects').data('isAdHoc');
+				if (projectId == null && !isAdHoc) {
+					return;
+				}
+				if (listTasks != null && projectId == projectIdForTasksCache) {
+					fillAndMatchTasksCombo(listTasks, request, response);
+				} else {
+	       			j$('#txtTasks').addClass('clsWaitRight');	        			
+					GW_CTRL_Timesheet.getListTasks(projectId, isAdHoc, '', function(result, event) {
+		       			j$('#txtTasks').removeClass('clsWaitRight');	        			
+		        		if (event.type == 'exception') {
+		        			alert(event.message);
+		        		} else {
+		        			if (result != null) {
+		        				listTasks = result;
+		        				projectIdForTasksCache = projectId;
+		        				fillAndMatchTasksCombo(listTasks, request, response);
+			        		}
+		        		}
+			   		}, {escape:false});
+			   	}		   		
+		   	}
+		);
+
+		/*******************************************************************************************************
+		* given the list of roles, what is being searched for, and the response object,
+		* fill in the response with the combo's items that match.
+		*******************************************************************************************************/
+		function fillAndMatchTasksCombo(listTs, request, response) {
+			var strSearch = request.term.toLowerCase();		
+ 			var isMatch = false;
+     		response(j$.map(listTs, function(item) {
+     			// special case AdHoc Project Roles
+     			if (item.Id == null) {
+     				item.Id = item.Name;
+   				}	   					
+     			
+     			var strLower = item.Name.toLowerCase();
+   				if (strLower.indexOf(strSearch) >= 0) {
+	   				// if we find the exact match, get its formal text and id.
+	   				// ideally, we'd select it, but I couldn't figure out how!
+	   				if (strLower == strSearch) {
+	   					j$("#txtTasks").val(item.Name).data('Id', item.Id);
+	   					isMatch = true;
+	   				}
+       				return {label: item.Name, value: item.Id}
+   				}
+   			}));
+
+			// if we don't find a match for a real search, clear all the combos.
+			if (!isMatch && strSearch != '') {
+		   		j$('#txtTasks').data('Id', null);
+			}	        														   
+		}
+
+		/*******************************************************************************************************
+		* specify the select event for Roles
+		*******************************************************************************************************/
+		j$('#txtTasks').autocomplete("option", "select",
+			function(event, ui) {
+				j$(this).val(ui.item.label).data('Id', ui.item.value);
+		   		return false;		   		 
+		   	}
+		);
+
+		/*******************************************************************************************************
+		* setup the button for showing all items		
+		*******************************************************************************************************/
+		j$(".clsBtnAll" )
+					.attr( "tabIndex", -1 )
+					.attr( "title", "Show All Items" )
+					.button({
+						icons: {
+							primary: "ui-icon-triangle-1-s"
+						},
+						text: false
+					})
+					.removeClass( "ui-corner-all" )
+					.addClass( "ui-corner-right ui-button-icon" )
+					.click(function() {
+						// find our input textbox to our left
+						var input = j$(this).prev('input');
+						if (input.autocomplete( "option", "source" ) == null) return;
+						// close if already visible
+						if ( input.autocomplete( "widget" ).is( ":visible" ) ) {
+							input.autocomplete( "close" );
+							return;
+						}
+
+						// work around a bug (likely same cause as #5265)
+						j$( this ).blur();
+
+						// pass empty string as value to search for, displaying all results
+						input.autocomplete( "search", "" );
+						input.focus();
+					});	
+
+		/*******************************************************************************************************
+		* setup the button for showing Common Time Logs		
+		*******************************************************************************************************/
+		j$(".clsBtnCommonTasks" )
+					.attr( "tabIndex", -1 )
+					.attr( "title", "Show Common Time Logs" )
+					.button({
+						icons: {
+							primary: "ui-icon-star"
+						},
+						text: false
+					})
+					.removeClass( "ui-corner-all" )
+					.addClass( "ui-corner-right ui-button-icon" )
+					.click(function() {
+						var input = j$('#txtTasks');
+						// close if already visible
+						if ( input.autocomplete( "widget" ).is( ":visible" ) ) {
+							input.autocomplete( "close" );
+							return;
+						}
+
+						// work around a bug (likely same cause as #5265)
+						j$( this ).blur();
+
+						// instead of having a seperate control, we can just setup the current Account, Project, and Tasks combo's 
+						if (listCommonTasks != null) {
+				   			j$('#txtAccounts').val(listCommonTasks[0].Account__r.Name).data('Id', listCommonTasks[0].Account__c);
+				   			j$('#txtProjects').val(listCommonTasks[0].Opportunity__r.Name).data('Id', listCommonTasks[0].Opportunity__c).data('isAdHoc', false);
+				   			j$('#txtTasks').val(null).data('Id', null);
+				   			listTasks = listCommonTasks;
+				   			projectIdForTasksCache = listCommonTasks[0].Opportunity__c;
+							input.autocomplete( "search", "" );
+							input.focus();
+				   		}
+
+					});	
+		
+		// set initial state for all edit fields.
+		gwTimeSheet.clearAllEditFields();
+		
+		// load up the common tasks (async during load).
+		loadCommonTasks();					
+		
+		// speed up initial loading of accounts, by starting it now!
+		loadAccounts();
+		
+		/*******************************************************************************************************
+		* trigger new accounts load if subcontractor ID changes
+		*******************************************************************************************************/
+		j$('#txtSubID').change( function () { 
+		    loadAccounts();
+   		    fillAndMatchAccountsCombo(listAccounts, request, response);
+		});						
+
+		/*******************************************************************************************************
+		* set our date field to have the nice datepicker!			
+		*******************************************************************************************************/
+		j$('#txtDate').datepicker({ 
+			autoSize: true,
+			dateFormat: 'm/d/yy',
+						
+			onSelect: function(dateText, inst) {
+				this.focus();
+			} 
+		});						
+		
+		// start with today
+		j$('#txtDate').val(gwTimeSheet.strDisplayDate(new Date()));
+		
+		/*******************************************************************************************************
+		* add logic to append the current year, if the user doesn't specify it.			
+		*******************************************************************************************************/
+		j$('#txtDate').bind('blur', function() {
+			var str = j$(this).val();
+			var ichFirst = str.indexOf('/');
+			var ichLast = str.lastIndexOf('/');
+			if (ichFirst >= 0 && ichFirst == ichLast) {
+				var dt = new Date();				
+				str += '/' + dt.getFullYear();
+				j$(this).val(str);
+			}
+		});
+		
+   	 	// when Projects gets the focus, drop the picklist
+		j$('#txtProjects').bind('focus', function() {
+			if (j$(this).autocomplete("widget").is(":visible") == false) {
+				j$(this).autocomplete( "search", "" );
+				return false;
+			}
+		});	
+			
+   	 	// when Tasks gets the focus, drop the picklist
+		j$('#txtTasks').bind('focus', function() {
+			if (j$(this).autocomplete("widget").is(":visible") == false) {
+				j$(this).autocomplete( "search", "" );
+				return false;
+			}
+		});
+						
+	});
+	
+	/*******************************************************************************************************
+	* load the list of common time logs
+	********************************************************************************************************/
+	function loadCommonTasks() {
+		
+		// load up the tasks        			
+		GW_CTRL_Timesheet.getListCommonRoles(99, function(result, event) {
+       		if (event.type == 'exception') {
+       			alert(event.message);
+       		} else {
+       			if (result != null) {
+       				listCommonTasks = result;
+        		}
+       		}
+   		}, {escape:false});
+	}		
+	
+
+	/*******************************************************************************************************
+	* load the list of accounts
+	********************************************************************************************************/
+	function loadAccounts() {
+		var subID = j$('#txtSubID').val();	
+   		j$('#txtAccounts').addClass('clsWaitRight');	        			
+		GW_CTRL_Timesheet.getListAccounts('', subID, function(result, event) {
+			j$('#txtAccounts').removeClass('clsWaitRight');	        								
+       		if (event.type == 'exception') {
+       			alert(event.message);
+       		} else {
+       			if (result != null) {
+       				listAccounts = result;
+        		}
+       		}
+   		}, {escape:false});		   		
+	}
+		
+	/*******************************************************************************************************
+	* create or update a time log record in the database.
+	********************************************************************************************************/
+	function saveLog(isUpdate) {
+		var accountId = j$('#txtAccounts').data('Id');
+		var projectId = j$('#txtProjects').data('Id');
+		var taskId = j$('#txtTasks').data('Id');
+		var strLogName = j$('#txtTasks').val();
+		var strDate = gwTimeSheet.strApexDate(new Date(j$('#txtDate').val()));
+		var strPhase = j$('#txtPhase').val();
+		var strHours;
+		var strPlanned;
+		var subID = j$('#txtSubID').val();	
+		if (gwTimeSheet.current_mode == 'Planning') {
+			strHours = '0';
+			strPlanned = j$('#txtHours').val();
+		} else {
+			strHours = j$('#txtHours').val();
+			strPlanned = '0';
+		}
+		
+		var strNotes = j$('#txtNotes').val();
+		var isBillable = j$('#cbxIsBillable:checked').length > 0;
+		
+		if (accountId == null || projectId == null || taskId == null) {
+			alert('Please pick an Account, Project, and Role that exists.');
+			return;
+		}
+		if (strDate == '' || strHours == '') {
+			alert('Please fill in Date and Hours.  Notes are optional.');
+			return;
+		}
+		
+		j$('#divSaveWait').attr('style', 'display:block;');
+		var logId = isUpdate ? j$('#btnUpdateExistingLog').data('Id') : null;
+		GW_CTRL_Timesheet.strSaveLog(accountId, projectId, taskId, logId, strLogName,
+			strDate, strPhase, strHours, strPlanned, strNotes, isUpdate, isBillable, subID,
+	
+			function(result, event) {
+				j$('#divSaveWait').attr('style', 'display:none;');
+				
+	       		if (event.type == 'exception') {
+	       			var m = event.message;
+	       			alert(m.indexOf('finance department'));
+	       			if (m.indexOf('finance department') > -1) {
+	       				
+	       				var sm = m.split('FIELD_CUSTOM_VALIDATION_EXCEPTION, ');
+	       				
+	       				var a = sm[1];
+	       				alert(a.replace(': []', ''));
+	       			} else {
+	       				alert(event.message);
+	       			}
+	       		} else if (result != null) {
+	       			
+	       			var m = result;
+	       			
+	       			if (m.indexOf('FIELD_CUSTOM_VALIDATION_EXCEPTION') > -1) {
+	       				
+	       				var sm = m.split('FIELD_CUSTOM_VALIDATION_EXCEPTION, ');
+	       				
+	       				var a = sm[1];
+	       				alert(a.replace(': []', ''));
+	       			} else {
+	       				alert(result);
+	       			}
+	       		} else {
+					// force Projects to refill if we just created an adhoc one.
+					if (j$('#txtProjects').val() == j$('#txtProjects').data('Id')) {
+						listProjects = null;	
+						projectIdForTasksCache = null;
+						listTasks = null;
+					}
+
+					// force Tasks to refill if we just created an adhoc one.
+					if (j$('#txtTasks').val() == j$('#txtTasks').data('Id')) {
+						projectIdForTasksCache = null;
+						listTasks = null;
+					}
+
+					// clear all fields, but keep date.
+					var strDt = j$('#txtDate').val();
+	       			gwTimeSheet.clearAllEditFields();
+	       			j$('#txtDate').val(strDt);
+	       			
+	       			//refresh page!
+	       			// UNDONE: optimize to only do if log created/updated is in the date range.
+	       			gwTimeSheet.getLogs();
+
+	       			// set focus back to account combo.
+	       			j$('#txtAccounts').focus();
+	       		}
+	       	}
+   		, {escape:false});		   		
+	
+	}
+
+	/*******************************************************************************************************
+	* clear all textboxes and combos values and ids
+	********************************************************************************************************/
+	gwTimeSheet.clearAllEditFields = function() {
+		//j$('#txtAccounts').val(null).data('Id', null);
+		//j$('#txtProjects').val(null).data('Id', null).data('isAdHoc', false);
+ 		//IsBillableDisplay(false, false);
+		//j$('#txtTasks').val(null).data('Id', null);
+		
+		if (gwTimeSheet.current_mode != 'Planning') {
+			j$('#txtDate').val(null);
+		}
+		//j$('#txtSubID').val(null);
+		j$('#txtHours').val(null);
+		j$('#txtPhase').val(null);
+		j$('#txtPlanned').val(null);
+		j$('#txtNotes').val(null);
+		j$('#cbxIsBillable').attr('checked','checked');
+		j$('#btnUpdateExistingLog').data('Id', null);
+ 		j$('#btnUpdateExistingLog').button("disable").button('refresh')
+	}
+
+	/*******************************************************************************************************
+	* put the current row into edit mode.
+	********************************************************************************************************/
+ 	function startEditIRow(irow) {
+ 		var logs = gwTimeSheet.logs;
+ 		
+ 		var isAdHoc = false;
+ 		
+ 		j$('#txtAccounts').val(strHTMLToText(logs[irow].Project_Role__r.Project__r.Account.Name));
+ 		
+ 		j$('#txtAccounts').data('Id', logs[irow].Project_Role__r.Project__r.AccountId);
+ 		
+ 		j$('#txtProjects').val(strHTMLToText(logs[irow].Project_Role__r.Project__r.Name));
+ 		
+ 		j$('#txtProjects').data('Id', logs[irow].Project_Role__r.Project__c);
+ 		
+ 		j$('#txtProjects').data('isAdHoc', isAdHoc);
+ 		
+ 		j$('#txtTasks').val(strHTMLToText(logs[irow].Project_Role__r.Name));
+ 		
+ 		j$('#txtTasks').data('Id', logs[irow].Project_Role__c);
+ 		
+ 		var phase;
+ 		if (logs[irow].Project_Phase__c != undefined) {
+ 			phase = strHTMLToText(logs[irow].Project_Phase__c);
+ 		} else {
+ 			phase = null;
+ 		}
+ 		j$('#txtPhase').val(phase);
+ 		
+ 		j$('#txtDate').val(gwTimeSheet.strDisplayDate(new Date(logs[irow].Date__c)));
+ 		
+ 		if (gwTimeSheet.current_mode == 'Planning') {
+ 			j$('#txtHours').val(logs[irow].Projected_Hours__c);
+ 		} else {
+ 			j$('#txtHours').val(logs[irow].Actual_Hours__c);
+ 		}
+ 		
+ 		var desc;
+ 		if (logs[irow].Time_Log_Description__c != undefined) {
+ 			desc = strHTMLToText(logs[irow].Time_Log_Description__c);
+ 		} else {
+ 			desc = null;
+ 		}
+ 		j$('#txtNotes').val(desc);
+ 		
+ 		j$('#btnUpdateExistingLog').data('Id', logs[irow].Id);
+ 		
+ 		j$('#btnUpdateExistingLog').button("enable").button('refresh');
+ 		
+ 		if (logs[irow].Billable__c) {
+			j$('#cbxIsBillable').attr('checked', 'checked');
+		} else {
+			j$('#cbxIsBillable').removeAttr('checked');
+		}	
+ 		
+ 		//IsBillableDisplay(isAdHoc, logs[irow].Billable__c);
+ 		
+ 		j$('#txtAccounts').focus();
+ 	}
+ 	
+	/*******************************************************************************************************
+	* show or hide the isBillable checkbox and label, and set the checkbox's state.
+	*******************************************************************************************************
+ 	function IsBillableDisplay(show, checked) {
+		j$('#cbxIsBillable').attr('hidden', !show);
+		j$('#lblIsBillable').attr('hidden', !show);
+
+		//ie9 didn't work with previous two lines, so try more.
+		if (show) {
+			j$('#cbxIsBillable').show();
+			j$('#lblIsBillable').show();
+		} else {
+			j$('#cbxIsBillable').hide();
+			j$('#lblIsBillable').hide();
+		}		
+		
+ 		if (checked) {
+			j$('#cbxIsBillable').attr('checked', 'checked');
+		} else {
+			j$('#cbxIsBillable').removeAttr('checked');
+		}			 			
+	}
+	*/
+	 		
+	/*******************************************************************************************************
+	* start editing a new Log for the given date.
+	********************************************************************************************************/
+ 	function startEditNew(strDt) {
+ 		gwTimeSheet.clearAllEditFields();
+ 		j$('#txtDate').val(strDt);
+ 		j$('#txtAccounts').focus();
+ 	}
+ 	
+	/*******************************************************************************************************
+	* delete the log for the given row.
+	********************************************************************************************************/
+ 	function deleteIRow(irow) {
+ 		// first select the row as normal
+ 		gwTimeSheet.selectIRow(irow);
+	
+		var logs = gwTimeSheet.logs;
+		
+ 		if (!confirm('Are you sure you\'d like to delete this log?')) return;
+ 		var logId = logs[irow].Id;
+ 		if (logId == null) return;
+		j$('#divSaveWait').attr('style', 'display:block;');
+		GW_CTRL_Timesheet.strDeleteLog(logId,
+			function(result, event) {
+				j$('#divSaveWait').attr('style', 'display:none;');
+	       		if (event.type == 'exception') {
+	       			alert(event.message);
+	       		} else if (result != null) {
+	       			alert(result);
+	       		} else {
+	       			gwTimeSheet.clearAllEditFields();
+	       			//refresh page!
+	       			gwTimeSheet.getLogs();
+	       		}
+	       	}
+   		, {escape:false});		   		
+ 	}
+		
+	/*******************************************************************************************************
+	* utility to convert html special tokens into normal text
+	********************************************************************************************************/
+ 	function strHTMLToText(str) {
+ 		var str_rep = str + '';
+ 		
+		return str.replace(/\&amp\;/g,'&'); 	
+ 	}
+ 	
+ 	j$('.clsBtnAll').button({
+ 							icons: {
+ 									primary: "ui-icon-triangle-l-s"
+ 									},
+ 							text: false
+ 	})
+ 	.removeClass( "ui-corner-all" )
+ 	.addClass( "ui-corner-right ui-button-icon" );
+ 	
+ 	
+</script>
+
+	
+   	<div class="pane-left">
+   	<h2>Time Logging &amp; Planning</h2>
+   	<div id="pane-edit" class="pane edit-log clsEditForm">
+   	
+   		
+	<ul class="pane-tabs">
+		<li class="pane-tab"><a class="tab-planning" href="#mode-planning">Plan Time</a></li>
+		<li class="pane-tab"><a class="tab-actual" href="#mode-actual">Actual Time</a></li>
+	</ul>
+	<div class="pane-inner">
+   		<button id="btnCommonTasks" style="display:none" class="clsBtnCommonTasks" type="button" >&nbsp;</button>
+   		<div class="edit-log-field gwfield edit-log-field-subid">
+   			<label for="txtSubID">Sub ID</label>
+	   		<input type="text" id="txtSubID" class="clsTxtEdit ui-widget ui-widget-content ui-corner-all" size="6"  tabIndex="0" />
+		</div>
+   		<div class="edit-log-field gwfield edit-log-field-date">
+   			<label for="txtDate">Date</label>
+	   		<input type="text" id="txtDate" class="clsTxtEdit ui-widget ui-widget-content ui-corner-all" size="6"  tabIndex="1" />
+		</div>
+   		<div class="edit-log-field gwfield edit-log-field-org">
+   			<label for="txtAccounts">Org.</label>
+   			<input type="text" id="txtAccounts" class="clsCombo ui-widget ui-widget-content ui-corner-left" tabIndex="2" /><button id="btnAccountsAll" class="clsBtnAll" type="button" >&nbsp;</button>
+		</div>
+		<div class="edit-log-field gwfield edit-log-field-project">
+			<label for="txtProjects">Project</label>
+	   		<input type="text" id="txtProjects" class="clsCombo ui-widget ui-widget-content ui-corner-left" tabIndex="3" /><button id="btnProjectsAll" class="clsBtnAll" type="button" >&nbsp;</button>
+	   	</div>
+		<div class="edit-log-field gwfield edit-log-field-role">
+			<label for="txtTasks">Role</label>
+	   		<input type="text" id="txtTasks" class="clsCombo ui-widget ui-widget-content ui-corner-left" tabIndex="4" /><button id="btnTasksAll" class="clsBtnAll" type="button" >&nbsp;</button>
+	   		
+		</div>
+		<!-- div class="edit-log-field gwfield edit-log-field-phase">
+			<label for="txtPhase">Phase</label>
+	   		<input type="text" id="txtPhase" class="clsCombo ui-widget ui-widget-content ui-corner-left" tabIndex="4" /><button id="btnPhasesAll" class="clsBtnAll" type="button" >&nbsp;</button>
+	   		
+		</div -->
+   		<input type="hidden" id="txtPhase" class="clsCombo ui-widget ui-widget-content ui-corner-left" tabIndex="4" />
+		<div class="edit-log-field gwfield edit-log-field-hours">
+			<label for="txtHours">Hours</label>
+			<input type="text" id="txtHours" class="clsTxtEdit ui-widget ui-widget-content ui-corner-all"  size="4" tabIndex="5" />
+	   		 		
+		</div>
+		<div class="edit-log-field gwfield edit-log-field-billable">
+			<label for="cbxIsBillable">Billable</label>
+	   		<input type="checkbox" checked="checked" id="cbxIsBillable" tabIndex="6" />	   			
+		</div>
+		 
+		<div class="edit-log-field edit-log-field-notes">
+			<label for="txtNotes">Notes</label>
+	   		<textarea id="txtNotes" class="clsTxtEditNotes ui-widget ui-widget-content ui-corner-all" tabIndex="7" />	   			
+		</div>
+		<div class="edit-log-controls">
+			<input type="button" id="btnUpdateExistingLog" class="clsBtnEdit" value="Update Existing Log" onclick="saveLog(true)" disabled="true" tabIndex="8" />
+			<input type="button" id="btnSaveNewLog" class="clsBtnEdit" value="Save New Log" onclick="saveLog(false);" tabIndex="9" />
+			<div id="divSaveWait" class="clsWaitLeft" style="display: none;" >Saving...</div>
+		</div>
+	</div>
+	</div>
+	</div>
+
+</apex:page>

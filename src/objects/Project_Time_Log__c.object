@@ -1,0 +1,720 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <formFactor>Large</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <comment>Action override created by Lightning App Builder during activation.</comment>
+        <content>Project_Time_Log_Page</content>
+        <formFactor>Large</formFactor>
+        <skipRecordTypeSelect>false</skipRecordTypeSelect>
+        <type>Flexipage</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <formFactor>Small</formFactor>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableEnhancedLookup>false</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableLicensing>false</enableLicensing>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <fields>
+        <fullName>Actual_Hours__c</fullName>
+        <externalId>false</externalId>
+        <inlineHelpText>The actual completed number of hours spent for a particular staff member in a particular project role, for staff resource measurement purposes and project invoicing</inlineHelpText>
+        <label>Actual Hours</label>
+        <precision>8</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Billable_Hours_del__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF( Billable__c = true, Actual_Hours__c, 0)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>Billable Hours</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Billable__c</fullName>
+        <defaultValue>true</defaultValue>
+        <externalId>false</externalId>
+        <inlineHelpText>Is this time log billable to an active project</inlineHelpText>
+        <label>Billable</label>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Billable_vs_Unbillable__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF( OR( 
+ AND( Project__r.Id = &quot;0065000000iREGx&quot;, Project_Role__r.Name &lt;&gt; &quot;PTO / Holiday&quot;),
+ Project__r.Id = &quot;0060d00001rLx9e&quot;,
+ AND( Project__r.Id &lt;&gt; &quot;0065000000iREGx&quot;, Project__r.Id &lt;&gt; &quot;0060d00001rLx9e&quot;,  Billable__c = false)),
+&quot;Miscellaneous or unbillable work&quot;, &quot;Data Solutions work&quot;)</formula>
+        <inlineHelpText>Used to separate client or otherwise billable work from unbillable work (e.g. team meetings, professional development, etc.)</inlineHelpText>
+        <label>Billable vs. Unbillable</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Date__c</fullName>
+        <externalId>false</externalId>
+        <inlineHelpText>The date this time log is either planned or completed</inlineHelpText>
+        <label>Date</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Date</type>
+    </fields>
+    <fields>
+        <fullName>Day__c</fullName>
+        <description># of Day of month time log occurred. Used for reporting</description>
+        <externalId>false</externalId>
+        <formula>Day( Date__c)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>Day</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>0</scale>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Internal_Billable_Client_Other__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF( AND( Project__r.Account.Name = &quot;501 Commons&quot;, Project__r.Id &lt;&gt; &quot;0065000000iREGx&quot;, Project__r.Id &lt;&gt; &quot;0060d00001rLx9e&quot;), &quot;Internal&quot;,
+
+IF( OR( 
+Project__r.Id = &quot;0065000000iREGx&quot;, 
+Project__r.Id = &quot;0060d00001rLx9e&quot;, 
+AND( Project__r.Id &lt;&gt; &quot;0065000000iREGx&quot;, Project__r.Id &lt;&gt; &quot;0060d00001rLx9e&quot;, Billable__c = false)), 
+&quot;Other&quot;,
+
+&quot;Client Billable&quot;))</formula>
+        <label>Internal, Billable Client, Other</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Internal_or_Client__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF( Project__r.Account.Account_ID_CaseSafe__c = &quot;0015000000XeNYwAAN&quot;, &quot;Internal&quot;, &quot;Client&quot;)</formula>
+        <label>Internal or Client</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Log_Amount__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF(Billable__c, Actual_Hours__c *  Project_Role__r.Hourly_Rate__c,0)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <inlineHelpText>The actual billable amount for this time log entry</inlineHelpText>
+        <label>Log Amount</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>Maintenance_Advanced__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF(
+   OR(
+       CONTAINS( Project_Role__r.Name , &quot;Maintenance&quot;), 
+       CONTAINS( Project_Role__r.Name , &quot;Advanced&quot;)
+   ),
+   true,
+   false
+)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>Maintenance/Advanced</label>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Month__c</fullName>
+        <externalId>false</externalId>
+        <formula>Month( Date__c)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>Month</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>0</scale>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Opportunity_Type__c</fullName>
+        <externalId>false</externalId>
+        <formula>TEXT( Project__r.Type )</formula>
+        <label>Opportunity Type</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Project_Phase__c</fullName>
+        <externalId>false</externalId>
+        <inlineHelpText>Project Phase related to this time log entry, for detailed reporting and invoice/fee breakdown</inlineHelpText>
+        <label>Project Phase</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+        <valueSet>
+            <valueSetDefinition>
+                <sorted>false</sorted>
+                <value>
+                    <fullName>Preparation</fullName>
+                    <default>false</default>
+                    <label>Preparation</label>
+                </value>
+                <value>
+                    <fullName>Design</fullName>
+                    <default>false</default>
+                    <label>Design</label>
+                </value>
+                <value>
+                    <fullName>Project Management</fullName>
+                    <default>false</default>
+                    <label>Project Management</label>
+                </value>
+                <value>
+                    <fullName>Delivery</fullName>
+                    <default>false</default>
+                    <label>Delivery</label>
+                </value>
+                <value>
+                    <fullName>Follow-Up</fullName>
+                    <default>false</default>
+                    <label>Follow-Up</label>
+                </value>
+            </valueSetDefinition>
+        </valueSet>
+    </fields>
+    <fields>
+        <fullName>Project_Role__c</fullName>
+        <externalId>false</externalId>
+        <label>Project Role</label>
+        <lookupFilter>
+            <active>true</active>
+            <errorMessage>The Opportunity related to the time log must be the same Opportunity as related to the project role.</errorMessage>
+            <filterItems>
+                <field>$Source.Project__c</field>
+                <operation>equals</operation>
+                <valueField>Project_Role__c.Project__c</valueField>
+            </filterItems>
+            <isOptional>false</isOptional>
+        </lookupFilter>
+        <referenceTo>Project_Role__c</referenceTo>
+        <relationshipLabel>Project Time Logs</relationshipLabel>
+        <relationshipName>Project_Time_Logs</relationshipName>
+        <relationshipOrder>0</relationshipOrder>
+        <reparentableMasterDetail>true</reparentableMasterDetail>
+        <trackTrending>false</trackTrending>
+        <type>MasterDetail</type>
+        <writeRequiresMasterRead>false</writeRequiresMasterRead>
+    </fields>
+    <fields>
+        <fullName>Project__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <externalId>false</externalId>
+        <label>Project</label>
+        <referenceTo>Opportunity</referenceTo>
+        <relationshipLabel>Project Time Logs</relationshipLabel>
+        <relationshipName>Project_Time_Logs</relationshipName>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Projected_Hours__c</fullName>
+        <externalId>false</externalId>
+        <inlineHelpText>The projected number of hours spent for a particular staff member in a particular project role, for staff resource planning purposes only, not for project budgeting, estimating or scoping.</inlineHelpText>
+        <label>Projected Hours</label>
+        <precision>8</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Revenue__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <externalId>false</externalId>
+        <inlineHelpText>The invoice or spend down responsible for paying off this time log</inlineHelpText>
+        <label>Revenue</label>
+        <referenceTo>Revenue__c</referenceTo>
+        <relationshipLabel>Covered Time Logs</relationshipLabel>
+        <relationshipName>Project_Time_Logs</relationshipName>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Staff_Person_First_Name__c</fullName>
+        <externalId>false</externalId>
+        <formula>Staff_Person__r.FirstName</formula>
+        <label>Staff Person First Name</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Staff_Person__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <externalId>false</externalId>
+        <inlineHelpText>The owner and staff member associated with this time log. The log represents this person&apos;s time tracking</inlineHelpText>
+        <label>Staff Person</label>
+        <referenceTo>Contact</referenceTo>
+        <relationshipLabel>Project Time Logs</relationshipLabel>
+        <relationshipName>Project_Time_Logs</relationshipName>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>This_Month__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF( 
+  AND(
+    MONTH( Date__c ) = MONTH ( TODAY() ),
+    YEAR( Date__c ) = YEAR ( TODAY() )),
+true,
+false)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>This Month</label>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Time_Log_Description__c</fullName>
+        <externalId>false</externalId>
+        <inlineHelpText>Narrative description for this time log entry</inlineHelpText>
+        <label>Time Log Description</label>
+        <length>32768</length>
+        <trackTrending>false</trackTrending>
+        <type>LongTextArea</type>
+        <visibleLines>5</visibleLines>
+    </fields>
+    <fields>
+        <fullName>Value_of_Work__c</fullName>
+        <externalId>false</externalId>
+        <formula>IF( AND( Project_Role__r.Hourly_Rate__c &lt; 1, Project_Role__r.Actual_Amount_Override__c &gt; 1),
+( (Project_Role__r.Actual_Amount_Override__c /  Project_Role__r.Budgeted_Hours__c ) *   Actual_Hours__c  ), 
+Log_Amount__c )</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <inlineHelpText>If the Project Role is prepaid, this indicates the value of work even if the log amount is 0. Formula takes the overall prepaid amount (actual amount override) and divides by the billed hours to determine value of work.</inlineHelpText>
+        <label>Value of Work</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>YearMonth__c</fullName>
+        <externalId>false</externalId>
+        <formula>TEXT(YEAR( Date__c )) &amp;  if(Month(Date__c)&lt;10,&apos;0&apos;,&apos;&apos;) &amp; TEXT(MONTH(Date__c))</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>YearMonth</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Year__c</fullName>
+        <externalId>false</externalId>
+        <formula>YEAR( Date__c )</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>Year</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>0</scale>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <label>Project Time Log</label>
+    <listViews>
+        <fullName>All</fullName>
+        <filterScope>Everything</filterScope>
+        <label>All</label>
+    </listViews>
+    <listViews>
+        <fullName>Billable_Confluence_Time_Logs</fullName>
+        <columns>Project__c</columns>
+        <columns>Project_Role__c</columns>
+        <columns>Staff_Person__c</columns>
+        <columns>Date__c</columns>
+        <columns>Billable__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Log_Amount__c</columns>
+        <columns>Time_Log_Description__c</columns>
+        <columns>NAME</columns>
+        <filterScope>Everything</filterScope>
+        <filters>
+            <field>Billable__c</field>
+            <operation>equals</operation>
+            <value>1</value>
+        </filters>
+        <filters>
+            <field>Date__c</field>
+            <operation>equals</operation>
+            <value>THIS_MONTH</value>
+        </filters>
+        <filters>
+            <field>Opportunity_Type__c</field>
+            <operation>equals</operation>
+            <value>Confluence</value>
+        </filters>
+        <label>Billable Confluence Time Logs This Month</label>
+    </listViews>
+    <listViews>
+        <fullName>Billable_Salesforce_Time_Logs_This_Month</fullName>
+        <columns>Project__c</columns>
+        <columns>Project_Role__c</columns>
+        <columns>Staff_Person__c</columns>
+        <columns>Date__c</columns>
+        <columns>Billable__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Log_Amount__c</columns>
+        <columns>Time_Log_Description__c</columns>
+        <columns>NAME</columns>
+        <filterScope>Everything</filterScope>
+        <filters>
+            <field>Billable__c</field>
+            <operation>equals</operation>
+            <value>1</value>
+        </filters>
+        <filters>
+            <field>Date__c</field>
+            <operation>equals</operation>
+            <value>THIS_MONTH</value>
+        </filters>
+        <filters>
+            <field>Opportunity_Type__c</field>
+            <operation>contains</operation>
+            <value>Salesforce,SF</value>
+        </filters>
+        <label>Billable Salesforce Time Logs This Month</label>
+    </listViews>
+    <listViews>
+        <fullName>Billable_Time_Logs</fullName>
+        <columns>Project__c</columns>
+        <columns>Project_Role__c</columns>
+        <columns>Staff_Person__c</columns>
+        <columns>Date__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Log_Amount__c</columns>
+        <columns>NAME</columns>
+        <filterScope>Everything</filterScope>
+        <filters>
+            <field>Billable__c</field>
+            <operation>equals</operation>
+            <value>1</value>
+        </filters>
+        <filters>
+            <field>Date__c</field>
+            <operation>equals</operation>
+            <value>THIS_MONTH</value>
+        </filters>
+        <filters>
+            <field>Project__c</field>
+            <operation>notContain</operation>
+            <value>501C</value>
+        </filters>
+        <filters>
+            <field>Log_Amount__c</field>
+            <operation>notEqual</operation>
+            <value>0</value>
+        </filters>
+        <label>Billable Time Logs</label>
+    </listViews>
+    <listViews>
+        <fullName>Time_Logs_This_Month</fullName>
+        <columns>Project__c</columns>
+        <columns>NAME</columns>
+        <columns>Project_Role__c</columns>
+        <columns>Staff_Person__c</columns>
+        <columns>Billable__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Date__c</columns>
+        <filterScope>Everything</filterScope>
+        <filters>
+            <field>Date__c</field>
+            <operation>equals</operation>
+            <value>THIS_MONTH</value>
+        </filters>
+        <label>Time Logs This Month</label>
+    </listViews>
+    <listViews>
+        <fullName>Time_Logs_This_Month_Crystal</fullName>
+        <columns>Project__c</columns>
+        <columns>NAME</columns>
+        <columns>Project_Role__c</columns>
+        <columns>Staff_Person__c</columns>
+        <columns>Billable__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Date__c</columns>
+        <filterScope>Everything</filterScope>
+        <filters>
+            <field>Date__c</field>
+            <operation>equals</operation>
+            <value>LAST_YEAR</value>
+        </filters>
+        <filters>
+            <field>Project__c</field>
+            <operation>contains</operation>
+            <value>DS Team Unbillable</value>
+        </filters>
+        <filters>
+            <field>Staff_Person_First_Name__c</field>
+            <operation>equals</operation>
+            <value>Crystal</value>
+        </filters>
+        <label>Time Logs This Month (Crystal)</label>
+        <language>en_US</language>
+    </listViews>
+    <listViews>
+        <fullName>Unbillable_DS_Time_Logs_Last_Month</fullName>
+        <columns>Project__c</columns>
+        <columns>Project_Role__c</columns>
+        <columns>Staff_Person__c</columns>
+        <columns>Date__c</columns>
+        <columns>Billable__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Log_Amount__c</columns>
+        <columns>Time_Log_Description__c</columns>
+        <columns>NAME</columns>
+        <filterScope>Everything</filterScope>
+        <filters>
+            <field>Billable__c</field>
+            <operation>equals</operation>
+            <value>0</value>
+        </filters>
+        <filters>
+            <field>Date__c</field>
+            <operation>equals</operation>
+            <value>LAST_MONTH</value>
+        </filters>
+        <filters>
+            <field>Opportunity_Type__c</field>
+            <operation>contains</operation>
+            <value>Salesforce,SF,Confluence,Data</value>
+        </filters>
+        <label>Unbillable DS Time Logs Last Month</label>
+    </listViews>
+    <listViews>
+        <fullName>Unbillable_DS_Time_Logs_This_Month</fullName>
+        <columns>Project__c</columns>
+        <columns>Project_Role__c</columns>
+        <columns>Staff_Person__c</columns>
+        <columns>Date__c</columns>
+        <columns>Billable__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Log_Amount__c</columns>
+        <columns>Time_Log_Description__c</columns>
+        <columns>NAME</columns>
+        <filterScope>Everything</filterScope>
+        <filters>
+            <field>Billable__c</field>
+            <operation>equals</operation>
+            <value>0</value>
+        </filters>
+        <filters>
+            <field>Date__c</field>
+            <operation>equals</operation>
+            <value>THIS_MONTH</value>
+        </filters>
+        <filters>
+            <field>Opportunity_Type__c</field>
+            <operation>contains</operation>
+            <value>Salesforce,SF,Confluence,Data</value>
+        </filters>
+        <label>Unbillable DS Time Logs This Month</label>
+    </listViews>
+    <nameField>
+        <displayFormat>Log-{0000000}</displayFormat>
+        <label>Project Time Log Name</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Project Time Logs</pluralLabel>
+    <searchLayouts>
+        <excludedStandardButtons>OpenListInQuip</excludedStandardButtons>
+    </searchLayouts>
+    <sharingModel>ControlledByParent</sharingModel>
+    <validationRules>
+        <fullName>Prepaid_time_exceeded</fullName>
+        <active>false</active>
+        <description>Actual prepaid time may not exceed budgeted hours</description>
+        <errorConditionFormula>AND(CONTAINS( Project_Role__r.Name , &quot;repaid&quot;), (Actual_Hours__c    &gt;  00N50000002DjRn.00N5000000A5i6l ))</errorConditionFormula>
+        <errorMessage>Prepaid actual hours may not exceed budgeted hours.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Prevent_Logging_After_Lock_Down</fullName>
+        <active>true</active>
+        <description>Prevents back logging of expenses after the finance lock down date.</description>
+        <errorConditionFormula>IF($Setup.Financial_Data_Lock_Settings__c.Financial_Data_Lock_Cutoff__c &gt; Date__c, true, false  )</errorConditionFormula>
+        <errorMessage>The finance department has locked the books for this month. Please contact your administrator to backlog this time log.</errorMessage>
+    </validationRules>
+    <visibility>Public</visibility>
+</CustomObject>

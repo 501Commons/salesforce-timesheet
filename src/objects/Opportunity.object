@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>Project_Category__c</fullName>
+        <externalId>false</externalId>
+        <label>Project Category</label>
+        <required>false</required>
+        <trackFeedHistory>false</trackFeedHistory>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+        <valueSet>
+            <valueSetDefinition>
+                <sorted>false</sorted>
+                <value>
+                    <fullName>Discovery</fullName>
+                    <default>false</default>
+                    <label>Discovery</label>
+                </value>
+                <value>
+                    <fullName>Implementation</fullName>
+                    <default>false</default>
+                    <label>Implementation</label>
+                </value>
+                <value>
+                    <fullName>Maintenance &amp; Support</fullName>
+                    <default>false</default>
+                    <label>Maintenance &amp; Support</label>
+                </value>
+                <value>
+                    <fullName>Quickstart</fullName>
+                    <default>false</default>
+                    <label>Quickstart</label>
+                </value>
+                <value>
+                    <fullName>Internal</fullName>
+                    <default>false</default>
+                    <label>Internal</label>
+                </value>
+            </valueSetDefinition>
+        </valueSet>
+    </fields>
+    <fields>
+        <fullName>Staff_Hours_Actual__c</fullName>
+        <externalId>false</externalId>
+        <inlineHelpText>Staff hours actually completed for this project, based on a summary and aggregation of all related project roles and project time logs</inlineHelpText>
+        <label>Staff Hours Actual</label>
+        <summarizedField>Project_Role__c.Actual_Hours__c</summarizedField>
+        <summaryForeignKey>Project_Role__c.Project__c</summaryForeignKey>
+        <summaryOperation>sum</summaryOperation>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Summary</type>
+    </fields>
+</CustomObject>

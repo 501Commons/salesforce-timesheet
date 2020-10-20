@@ -1,0 +1,22 @@
+# Salesforce / SFDX / CCI
+.cci
+.sfdx
+/src.orig
+
+# Python
+*.pyc
+__pycache__
+
+# Robot Framework results
+robot/salesforce-timesheet/results/
+
+# Editors
+*.sublime-project
+*.sublime-workspace
+.vscode
+.idea
+.project
+.settings
+
+# Misc
+.DS_Store

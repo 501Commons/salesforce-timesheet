@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>Subcontractor_PIN__c</fullName>
+        <description>Used to identify subcontractors for the purposes of time entry</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Used to identify subcontractors for the purposes of time entry</inlineHelpText>
+        <label>Subcontractor PIN</label>
+        <length>30</length>
+        <required>false</required>
+        <trackFeedHistory>false</trackFeedHistory>
+        <trackHistory>false</trackHistory>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+</CustomObject>

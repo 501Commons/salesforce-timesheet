@@ -1,0 +1,1519 @@
+<apex:page controller="GW_CTRL_Timesheet" sidebar="false" standardStylesheets="false" >
+
+<script src="{!URLFOR($Resource.jQueryFiles, 'js/jquery-1.6.2.min.js')}" />
+<script src="{!URLFOR($Resource.jQueryFiles, 'js/jquery-ui-1.8.16.custom.min.js')}"/>
+<script src="{!URLFOR($Resource.jQueryFiles, 'js/jquery.dataTables.min.js')}"/>
+<!-- <script src="{!URLFOR($Resource.jQueryFiles, 'js/jquery.dataTables.rowGrouping.js')}"/> -->
+<script src="{!URLFOR($Resource.jQueryFiles, 'js/waypoints.min.js')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.jQueryFiles, 'css/smoothness/jquery-ui-1.8.16.custom.css')}"/>
+
+
+
+<script type="text/javascript">
+
+    
+
+    /*******************************************************************************************************
+    * set up our gwTimeSheet namespace object and initial state
+    ********************************************************************************************************/
+    var j$ = jQuery.noConflict();
+    
+    gwTimeSheet = new Object();
+    
+    // Are we in Planning or Actual mode?
+    gwTimeSheet.current_mode = 'Actual';
+    
+    // Set the default date range (month or week)
+    gwTimeSheet.date_mode = 'Weekly';
+    
+    // An array of time logs returned from the server.
+    gwTimeSheet.logs = new Array();
+    
+    gwTimeSheet.dataForTable = new Array();
+
+    // tracks the current id of setInterval, for avoiding multiple gwTimeSheet.getLogs() calls.
+    gwTimeSheet.intervalId = 0;
+    
+    // tracks the currently selected row in the log table
+    gwTimeSheet.irowSel = 0;
+    
+    
+    // columns object
+    gwTimeSheet.dtColumns = function() {
+        var cols = [
+            { "sTitle": "id",  "bSearchable":false, "sClass": "log-col-id" },
+            { "sTitle": "Org", "sClass": "log-col-org" },
+            { "sTitle": "Project", "sClass": "log-col-project" },
+            { "sTitle": "Date", "sClass": "log-col-date", "sWidth": "100px" },
+            { "sTitle": "Organization - Project", "sClass": "log-col-orgProject" },
+            { "sTitle": "Role", "sClass": "log-col-role", "sWidth": "100px" },
+            { "sTitle": "Phase", "sClass": "log-col-phase","sWidth": "100px" },
+            { "sTitle": "Notes", "bSortable": false, "sClass": "log-col-notes" },
+            { "sTitle": "Billable", "sClass": "log-col-billable", "sWidth": "60px" },
+            { "sTitle": "Actual", "sClass": "log-col-actual", "sWidth": "110px" },
+            { "sTitle": "Delete", "bSortable": false, "bSearchable": false, "sClass": "log-col-delete", "sWidth": "40px" }
+            ]
+        switch (gwTimeSheet.current_mode) {
+            case 'Planning':
+                cols[9] = { "sTitle": "Projected", "sClass": "log-col-actual", "sWidth": "110px" };
+                break;
+            case 'Actual':
+                cols[9] = { "sTitle": "Actual", "sClass": "log-col-actual", "sWidth": "110px" };
+                break;
+        }
+        return cols;
+    }
+        
+
+    /*******************************************************************************************************
+    * this function is called when the page loads
+    ********************************************************************************************************/
+    j$(document).ready(function() { 
+         
+        //hide the projected hours
+        j$('#projectedSum').hide();
+        
+        // hide the no results msg
+        gwTimeSheet.noResults(false);
+        
+        // click labels
+        var clickLabels = j$('.click-label');
+        
+        if (clickLabels.length > 0) {
+            
+            clickLabels.each( function () {
+                
+                var ititle = j$(this).attr('title');
+                var ival = j$(this).val();
+                
+                if (ival == '' && ititle != ival) {
+                    j$(this).val(ititle);
+                }
+                
+            });
+            
+            clickLabels.live('focus', function () {
+                
+                var ititle = j$(this).attr('title');
+                var ival = j$(this).val();
+                
+                if (ival == ititle) {
+                    j$(this).val('');
+                }
+                
+            });
+            
+            clickLabels.live('blur', function () {
+                
+                var ititle = j$(this).attr('title');
+                var ival = j$(this).val();
+                
+                if (ival == '') {
+                    j$(this).val(ititle);
+                }
+                
+            });
+                
+        }
+        
+        // setup filters
+        
+        // search all filter
+        j$('.pane-filters .gwfield input').bind('keyup change', function () {
+            
+            var filter = j$(this).attr('id');
+            var column = -1;
+            var textfilter = j$(this).val();
+            
+            switch (filter) {
+            case 'filterSearch':
+                column = -1;
+                break;
+            case 'filterOrganization':
+                column = 1;
+                break;
+            case 'filterProject':
+                column = 2;
+                break;
+            case 'filterRole':
+                column = 5;
+                break;
+            case 'filterPhase':
+                column = 6;
+                break;
+            }
+            
+            
+            try {
+                if (column == -1) { 
+                    gwTimeSheet.table.fnFilter(j$(this).val());
+                } else {
+                    gwTimeSheet.table.fnFilter(j$(this).val(), column);
+                }
+                
+            } catch (e) {
+                exception = e;
+            }
+        
+        });
+        
+        // date mode switching 
+        j$('.date-mode').click( function () {
+            
+            var newmode = j$(this).data('date_mode');
+            gwTimeSheet.setDateMode(newmode);
+            
+            return false;
+        
+        });
+        
+        
+        //sticky edit
+        j$.waypoints.settings.scrollThrottle = 30;
+        j$('#pane-edit').waypoint(function(event, direction) {
+            var sScroll = j$(this).height() < j$.waypoints('viewportHeight');
+            if (sScroll) {
+                j$(this).toggleClass('sticky', direction === "down");
+            } else {
+                j$(this).removeClass('sticky');
+            }
+            event.stopPropagation();
+        });
+        
+        
+        
+        //buttonify
+        j$('#btnPrevious').button({
+                icons: {
+                        primary: "ui-icon-carat-1-w"
+                        },
+                text: false
+        });
+        j$('#btnNext').button({
+                icons: {
+                        primary: "ui-icon-carat-1-e"
+                        },
+                text: false
+        });
+        j$('#btnToday').button();
+        j$('div.date-modes').buttonset()
+        j$('#btnUpdateExistingLog').button();
+        j$('#btnSaveNewLog').button();
+        
+        // the initial date span
+        gwTimeSheet.setDates(0);
+        gwTimeSheet.setDateMode({'mode':gwTimeSheet.date_mode, 'refresh': false});
+        gwTimeSheet.setCurrentMode(gwTimeSheet.current_mode);
+        
+    });
+    /*******************************************************************************************************
+    * Set Current mode ('Actual' or 'Planning')
+    * &param mode string - the mode to switch to.
+    ********************************************************************************************************/
+    gwTimeSheet.setCurrentMode = function(mode) {
+        j$('a.tab-active').removeClass('tab-active');
+        
+        gwTS = gwTimeSheet;
+        gwTS.current_mode = mode;
+        gwTS.toggleDateEdit();
+        gwTS.clearAllEditFields();
+        if (mode == 'Planning') {
+            j$('.date-modes').hide();
+            gwTimeSheet.setDateMode({'mode':'Monthly', 'refresh': false});
+            gwTimeSheet.setDates(0);
+            
+            j$('a.tab-planning').addClass('tab-active');
+        } else {
+            j$('.date-modes').show();
+            gwTimeSheet.getLogs();
+            
+            j$('a.tab-actual').addClass('tab-active');
+            
+        }
+        
+        
+        
+        
+    }
+    /*******************************************************************************************************
+    * Set Date mode
+    * &param mode string - the mode to switch to.
+    ********************************************************************************************************/
+    gwTimeSheet.setDateMode = function (m) {
+        var mode;
+        var refresh = true;
+        if (typeof m == "string") {
+            mode = m;
+        } else {
+            mode = m.mode;
+            refresh = m.refresh;
+        }
+        
+        gwTimeSheet.date_mode = mode;
+        if (refresh) {
+            gwTimeSheet.setDates(0);
+        }
+        
+        j$('.date-mode:checked').removeAttr('checked').button("enable").button('refresh');
+        
+        
+        var cls = '.date-mode-'+mode.toLowerCase();
+        
+        j$(cls).attr('checked','checked').button("enable").button('refresh');
+        
+        
+    }
+    
+    
+    /*******************************************************************************************************
+    * event handler for resizing the window.  resize our log table.
+    ********************************************************************************************************/
+    /*j$(window).resize(function() {
+        gwTimeSheet.resizeLogs(true);
+    });*/
+    /*******************************************************************************************************
+    * Function to get unique values for a particular column
+    * @param CSS class of the column to get
+    ********************************************************************************************************/
+    gwTimeSheet.colValues = function (cClass) {
+        var cells = j$('td.'+cClass);
+        var values = [0,1,2,3];
+        
+        cells.each( function () {
+            
+            var cellval = j$(this).text();
+            try {
+                if (j$.inArray(cell_val, values) < 0) {
+                
+                    values.push(cell_val);
+                
+                }
+            } catch (e) {
+                values.push(cell_val);
+            }
+            
+        });
+        
+        return values;
+    }
+    
+    /*******************************************************************************************************
+    * set the Log table's height based off our window height.
+    ********************************************************************************************************/
+    gwTimeSheet.resizeLogs = function (redraw) {
+        var newHeight = j$(window).height() - j$("#divEditForm").height() - 200;
+        if (redraw) {
+            j$("#divLogs").height(newHeight);
+        }
+        return newHeight;
+    }
+    /*******************************************************************************************************
+    * Create month select.
+    ********************************************************************************************************/
+    gwTimeSheet.toggleDateEdit = function () {
+        
+        switch (gwTimeSheet.current_mode) {
+            case 'Planning':
+                
+                if (j$('#selectMonth').length < 1) {
+                    var range = 13;
+                    
+                    
+                    var today = new Date();
+                    var month = today.getMonth();
+                    var year = today.getFullYear();
+                    
+                    var labels = new Array();
+                    var values = new Array();
+                    var suffix = '';
+                    for (i = 0; i < range; i++) {
+                        
+                        if (month > 11) {
+                            year += 1;
+                            suffix = ' - '+year;
+                            month = 0;
+                        }
+                        
+                        nd = new Date(year, month, 1);
+                        labels.push(gwTimeSheet.strDisplayMonthName(nd)+suffix);
+                        values.push(nd);
+                        month += 1;
+                    }
+                    
+                    
+                    var select = j$('<select />');
+                    
+                    select.attr('id','selectMonth')
+                    .change(function () {
+                        j$('#txtDate').val(j$(this).val());
+                        
+                        var nd = new Date(j$(this).val());
+                        var sd = gwTimeSheet.startDate;
+                        
+                        var oyr = sd.getFullYear();
+                        var nyr = nd.getFullYear();
+                        yr = nyr - oyr;
+                        yrs = Math.abs(yr * 12);
+                        
+                        offset = yr > 0 ? yrs - sd.getMonth() + nd.getMonth() : nd.getMonth() - sd.getMonth();
+                        offset = nyr < oyr ? 0 - (yrs + sd.getMonth() - nd.getMonth()) : offset;
+                        
+                        gwTimeSheet.setDates(offset);
+                    });
+                    
+                    for (i = 0; i < labels.length; i++) {
+                        var option = j$('<option />');
+                        if (i == 0) {
+                            option.attr('selected','selected');
+                        }
+                        option.attr('value',values[i])
+                        .text(labels[i]);
+                        select.append(option);
+                    }
+                    j$('.edit-log-field-date').append(select);
+                }
+                j$('#selectMonth').show();
+                j$('#txtDate').val(j$('#selectMonth').val()).hide();
+                
+                break;
+            case 'Actual':
+                j$('#selectMonth').hide();
+                j$('#txtDate').show();
+                break;
+        }
+        
+        
+    }
+    
+    
+    
+    /*******************************************************************************************************
+    * asynchronously query Salesforce for the time logs in the specified date range
+    ********************************************************************************************************/
+    gwTimeSheet.getLogs = function () {
+        // update the date range display
+        j$('#dateRange').html(gwTimeSheet.strDisplayDate(gwTimeSheet.startDate) + ' - ' + gwTimeSheet.strDisplayDate(gwTimeSheet.endDate));
+        
+        //disable UI
+        gwTimeSheet.setUIState(false);
+        
+        gwTimeSheet.noResults(false);
+	var subID = j$('#txtSubID').val();
+GW_CTRL_Timesheet.getListLogs(gwTimeSheet.strApexDate(gwTimeSheet.startDate), gwTimeSheet.strApexDate(gwTimeSheet.endDate), gwTimeSheet.current_mode, subID, function(result, event) {
+            if (event.type == 'exception') {				      
+                alert(event.message);
+            } else {
+                
+                gwTimeSheet.setUIState(true);
+                gwTimeSheet.logs = result;
+                gwTimeSheet.getProjectedSum();
+                gwTimeSheet.processResults();
+                
+                if (gwTimeSheet.logs.length < 1) {
+                    gwTimeSheet.noResults(true);
+                }
+            }
+        });
+    }
+    
+    /*******************************************************************************************************
+    * asynchronously query Salesforce for the sum of project time in date range
+    ********************************************************************************************************/
+    gwTimeSheet.getProjectedSum = function () {
+        
+        j$('#projectedSum').fadeOut();
+        
+        if (gwTimeSheet.current_mode == 'Actual' && gwTimeSheet.date_mode == 'Monthly') {
+            
+            GW_CTRL_Timesheet.getProjectedSum(gwTimeSheet.strApexDate(gwTimeSheet.startDate), gwTimeSheet.strApexDate(gwTimeSheet.endDate), function(result, event) {
+                if (event.type == 'exception') {
+                    alert(event.message);
+                } else {
+                    var summy = (result[0].sum != undefined) ? result[0].sum : 0;
+                    j$('#projectedSum span.projected-hours').text(result[0].sum);
+                    if (summy) j$('#projectedSum').fadeIn();
+                }
+            });
+        }
+    }
+    
+    /*******************************************************************************************************
+    * Function to add a value to a list.  Allows for additional processing if needed.
+    * @param item: The value to insert into the column
+    * @param data_list: the list to append the item to
+    ********************************************************************************************************/
+    gwTimeSheet.addCell = function (item, data_list) {
+        
+        data_list.push(item);
+        
+    }
+    /*******************************************************************************************************
+    * Disable some UI while loading
+    ********************************************************************************************************/
+    gwTimeSheet.setUIState = function (s) {
+        if (!s) {
+            j$('.pane-toolbar input').attr('disabled','disabled').fadeTo(200,0.5);
+        } else {
+            j$('.pane-toolbar input').removeAttr('disabled').fadeTo(200,1);;
+        }
+    }
+    
+    /*******************************************************************************************************
+    * Processed the results from Salesforce into a simpler Object compatible with dataTable()
+    ********************************************************************************************************/
+    gwTimeSheet.processResults = function () {
+        gwTimeSheet.dataForTable = new Array();
+        var gwTS = gwTimeSheet;
+        
+        var dts = gwTS.dataForTable;
+        var add = gwTimeSheet.addCell;
+        
+        var results = gwTS.logs; 
+        
+        var ar = new Array();
+        
+        for (i = 0; i < results.length; i++) {
+            var row = new Array();
+            
+            add(i+'', row);
+            
+            var accLink = '<a target="_blank" href="/' + results[i].Project_Role__r.Project__r.AccountId + '">' + results[i].Project_Role__r.Project__r.Account.Name + '</a>';
+            var projLink = '<a target="_blank" href="/' + results[i].Project_Role__r.Project__c + '">' + results[i].Project_Role__r.Project__r.Name + '</a>';
+            
+            add(accLink, row);
+            add(projLink, row);
+            
+            var dt = new Date(results[i].Date__c);
+            add(gwTimeSheet.strDisplayDate(dt), row);
+            
+            
+            add(accLink+ ' - ' +projLink, row);
+            
+            add(results[i].Project_Role__r.Name, row);
+            
+            var phase;
+            if (results[i].Project_Phase__c) {
+                phase = results[i].Project_Phase__c;
+            } else {
+                phase = '';
+            }
+            add(phase, row);
+            
+            var strNotes = results[i].Time_Log_Description__c;
+            if (strNotes == null) strNotes = '';
+            add(strNotes, row);
+            
+            var billChked = results[i].Billable__c == true ? 'checked="checked"' : '';
+            add('<span style="display: none">'+results[i].Billable__c+'</span><input class="log-billable" type="checkbox" disabled="disabled"' + billChked + '/>', row);
+            
+            var aHours;
+            if (gwTimeSheet.current_mode == 'Actual') {
+                if (results[i].Actual_Hours__c) {
+                    aHours = results[i].Actual_Hours__c + '';
+                } else {
+                    aHours = '';
+                }
+            } else {
+                if (results[i].Projected_Hours__c) {
+                    aHours = results[i].Projected_Hours__c + '';
+                } else {
+                    aHours = '';
+                }
+            }
+            add(aHours, row);
+            
+            //var day_group_string = gwTS.strDisplayDayName(dt) + ' - ' + gwTimeSheet.strDisplayDate(dt);
+            //add(day_group_string, row);
+            
+            add('<a href="#" class="log-delete">&nbsp;</a>', row);
+            
+            dts.push(row);
+        }
+        gwTimeSheet.renderTable();
+    }
+    /*******************************************************************************************************
+    * Sets up the datatable. Cleans up the table if no results were found.
+    ********************************************************************************************************/
+    gwTimeSheet.renderTable = function () {
+        
+        
+        if (j$('#tblLogs').length < 1) {
+            var tbl_logs = j$('<table id="tblLogs" cellpadding="0" cellspacing="0" class="log-list" />');
+            j$('#divLogs').append(tbl_logs);
+        }
+        
+        if (gwTimeSheet.dataForTable.length) {
+            if (j$('#tblLogs').empty()) {
+                gwTimeSheet.table = j$('#tblLogs').dataTable({
+                    "bJQueryUI": true,
+                    "bLengthChange": false,
+                    "iDisplayLength": 9999,
+                    "bAutoWidth": false,
+                    "sDom": 'rt',
+                    "bDestroy": true,
+                    "bInfo": false,
+                    "aaData": gwTimeSheet.dataForTable,
+                    "aaSorting": [[3,'desc']],
+                    "aoColumns": gwTimeSheet.dtColumns(),
+                    "fnDrawCallback": function() {
+                        if (gwTimeSheet.current_mode == 'Actual') {
+                            var dateSorts = j$('.log-col-date.sorting_1');
+                            if (dateSorts.length > 0) {
+                                gwTimeSheet.setTableGroups();
+                            }
+                        } else {
+                            j$('td.log-col-date').each(function() {
+                            
+                                var td = new Date(j$(this).text());
+                                
+                                j$(this).text(gwTimeSheet.strDisplayMonthName(td));
+                            
+                            }); 
+                        }
+                        gwTimeSheet.sumTotalHours();
+                    }
+                });
+                
+                
+                
+                j$('.fg-toolbar').prepend(j$('#logDates'));
+            } else {
+                gwTimeSheet.table.fnDraw(false);
+            }
+            gwTimeSheet.setupDeletes();
+            
+            
+        } else {
+            j$('#tblLogs').detach();
+            gwTimeSheet.sumTotalHours();
+        }
+    }
+    /*******************************************************************************************************
+    * Sum the hours column
+    ********************************************************************************************************/
+    gwTimeSheet.sumTotalHours = function () {
+        var hourCells = j$('td.log-col-actual');
+        if (hourCells.length > 0) {
+            var total = 0;
+            hourCells.each(function () {
+                var hours = parseFloat(j$(this).text());
+                total += hours;
+            });
+            var rounded_total = Math.round(total*100)/100;
+            j$('div.total-hours').text(rounded_total);
+        } else {
+            j$('div.total-hours').text('0');
+        }
+    }
+    
+    /*******************************************************************************************************
+    * Group by day
+    ********************************************************************************************************/
+    gwTimeSheet.setTableGroups = function () {
+        var rows = j$('#tblLogs tbody tr');
+        
+        if (rows.length > 0) {
+            
+            var shwWk = gwTimeSheet.current_mode == 'Actual';
+            var curD;
+            var curW;
+            var wi = 0;
+            var sum = 0;
+            var wksum = 0;
+            var tr;
+            var wktr
+            rows.each(function() {
+                
+                var row_date = j$(this).find('td.log-col-date').text();
+                
+                
+                
+                if (row_date && curD != row_date) {
+                    
+                    sum = 0;
+                    
+                    curD = row_date;
+                    
+                    //insert grouping row
+                    tr = j$('<tr class="log-row-group"><td /></tr>');
+                    
+                    var nwd = new Date(row_date);
+                    
+                    var onejan = new Date(nwd.getFullYear(),0,1);
+                    var week = Math.ceil((((nwd - onejan) / 86400000) + onejan.getDay()+1)/7);
+                    
+                    // set the colspan and insert total cell
+                    var columns = gwTimeSheet.dtColumns();
+                    var colspan;
+                    var offset;
+                    for (i = 0; i < columns.length; i++) {
+                        
+                        if (columns[i].sClass == 'log-col-date') {
+                            offset = i;
+                        }
+                        
+                        if (columns[i].sClass == 'log-col-actual') {
+                            colspan = i - offset;
+                        }
+                    }
+                    
+                    var dayString = shwWk == true ? nwd.toDateString() : gwTimeSheet.strDisplayMonthName(nwd);
+                    
+                    tr.find('td').attr('colspan',colspan).html('<span class="log-row-group-day">'+dayString+'</span>');
+                    
+                    tr.append('<td class="log-col-sum-cell"><span class="log-col-sum-number" /></td><td />');
+                    
+                    j$(this).before(tr);
+                    
+                    if (curW != week && gwTimeSheet.date_mode == 'Monthly' && shwWk) {
+                        curW = week;
+                        wksum = 0;
+                        wi += 1;
+                        if (wi > 0) {
+                            wktr = j$('<tr class="log-row-group"><td /></tr>');
+                            wktr.addClass('log-row-week');
+                            wktr.find('td').attr('colspan',colspan).html('<span class="log-row-group-week">week</span>');
+                            wktr.append('<td class="log-col-sum-cell"><span class="log-col-sum-number" /></td><td />');
+                            tr.before(wktr);
+                        }
+                    }
+                    
+                    
+                    
+                }
+                
+                var amt = parseFloat(j$(this).find('td.log-col-actual').text());
+                
+                sum += amt;
+                wksum += amt;
+                
+                var sum_rounded = Math.round(sum*100)/100;
+                var wksum_rounded = Math.round(wksum*100)/100;
+                
+                tr.find('.log-col-sum-number').text(sum_rounded);
+                
+                if (wktr && shwWk) {
+                    wktr.find('.log-col-sum-number').text(wksum_rounded);
+                }
+                
+                
+            });
+            
+        }
+    }
+       
+    /*******************************************************************************************************
+    * Add click functions to rows.
+    ********************************************************************************************************/
+    j$('#tblLogs tbody tr.odd,#tblLogs tbody tr.even').live('click', function() {
+        
+        var rIndex = j$(this).find('td.log-col-id').html();
+        //gwTimeSheet.selectIRow(parseInt(rIndex));
+        
+        j$(".selected").removeClass("selected");
+        j$(this).addClass("selected");
+        
+        irowSel = parseInt(rIndex); 
+        startEditIRow(irowSel);
+        
+    });
+    j$('#tblLogs tbody tr.odd,#tblLogs tbody tr.even').live("mouseover mouseout", function(event) {
+        if ( event.type == "mouseover" ) {
+            j$(this).addClass('log-highlight');
+        } else {
+            j$(this).removeClass('log-highlight');
+        }
+    });
+    
+    
+    gwTimeSheet.setupDeletes = function () {
+        j$('a.log-delete')
+        .button({
+                icons: {
+                        primary: "ui-icon-trash"
+                        },
+                text: false
+        })
+        .click(function () {
+            
+            var irow = parseInt(j$(this).parent().parent().find('.log-col-id').html());
+            
+            deleteIRow(irow);
+            
+            
+        });
+    }
+    
+    /*******************************************************************************************************
+    * method to make the specified row selected.
+    ********************************************************************************************************/
+    gwTimeSheet.selectIRow = function (irow) {
+        // remove any previous selection.
+        j$(".selected").removeClass("selected");
+        j$("#tblLogs tbody tr").eq(irow).addClass("selected");
+        
+        irowSel = irow; 
+        startEditIRow(irowSel);
+    }
+    
+    /*******************************************************************************************************
+    * Display no results markup.
+    ********************************************************************************************************/
+    gwTimeSheet.noResults = function (show) {
+        if (show) {
+            j$('#noresults').fadeIn(400);
+            
+        } else {
+            j$('#noresults').fadeOut(200);
+        }
+    }
+    
+    /*******************************************************************************************************
+    * utility to put a javascript date into a string format Salesforce expects
+    ********************************************************************************************************/
+    gwTimeSheet.strApexDate = function (dt) {
+        return dt.getUTCFullYear() + '-' + (dt.getUTCMonth()+1) + '-' + dt.getUTCDate();
+    }
+    
+    /*******************************************************************************************************
+    * utility to take a javascript date, and return a friendly UTC date string for display on the page.
+    ********************************************************************************************************/
+    gwTimeSheet.strDisplayDate = function (dt) {
+        return (dt.getUTCMonth()+1) + '/' + dt.getUTCDate() + '/' + dt.getUTCFullYear();
+    }
+    
+    /*******************************************************************************************************
+    * utility to take a javascript date, and return a friendly day name for display on the page.
+    ********************************************************************************************************/
+    gwTimeSheet.strDisplayDayName = function (dt) {
+        switch (dt.getUTCDay()) {
+            case 0: return 'Sunday';
+            case 1: return 'Monday';
+            case 2: return 'Tuesday';
+            case 3: return 'Wednesday';
+            case 4: return 'Thursday';
+            case 5: return 'Friday';
+            case 6: return 'Saturday';
+        }
+    }
+    
+    /*******************************************************************************************************
+    * utility to take a javascript date, and return a friendly month name for display on the page.
+    ********************************************************************************************************/
+    gwTimeSheet.strDisplayMonthName = function (dt) {
+        switch (dt.getMonth()) {
+            case 0: return 'January';
+            case 1: return 'February';
+            case 2: return 'March';
+            case 3: return 'April';
+            case 4: return 'May';
+            case 5: return 'June';
+            case 6: return 'July';
+            case 7: return 'August';
+            case 8: return 'September';
+            case 9: return 'October';
+            case 10: return 'November';
+            case 11: return 'December';
+        }
+    }
+    
+    /*******************************************************************************************************
+    * utility to compare two dates by their UTC values.
+    * returns 
+    *   -1 if dt1 < dt2
+    *   0 if dt1 == dt2
+    *   1 if dt1 > dt2
+    ********************************************************************************************************/
+    gwTimeSheet.compareDatesByUTC = function (dt1, dt2) {
+        var dtUTC1 = Date.UTC(dt1.getUTCFullYear(), dt1.getUTCMonth(), dt1.getUTCDate());
+        var dtUTC2 = Date.UTC(dt2.getUTCFullYear(), dt2.getUTCMonth(), dt2.getUTCDate());
+        if (dtUTC1 < dtUTC2)
+            return -1;
+        else if (dtUTC1 == dtUTC2)
+            return 0;
+        else
+            return 1;   
+    } 
+
+    /*******************************************************************************************************
+    * Click handler for the Previous button.  Load logs from the previous week.
+    ********************************************************************************************************/
+    gwTimeSheet.clickBtnPrevious = function () {
+        /*gwTimeSheet.startDate.setDate(gwTimeSheet.startDate.getDate() - 7);
+        gwTimeSheet.endDate = new Date(gwTimeSheet.startDate);
+        gwTimeSheet.endDate.setDate(gwTimeSheet.endDate.getDate() + 6);
+        //seemed too slow!
+        //intervalId = self.setInterval("gwTimeSheet.getLogs()", 300);
+        gwTimeSheet.getLogs();*/
+        
+        gwTimeSheet.setDates(-1);
+    }
+    
+    /*******************************************************************************************************
+    * Click handler for the Next button.  Load logs from the next week.
+    ********************************************************************************************************/
+    gwTimeSheet.clickBtnNext = function () {
+        /*gwTimeSheet.startDate.setDate(gwTimeSheet.startDate.getDate() + 7);
+        gwTimeSheet.endDate = new Date(gwTimeSheet.startDate);
+        gwTimeSheet.endDate.setDate(gwTimeSheet.endDate.getDate() + 6);
+        //seemed too slow!
+        //intervalId = self.setInterval("gwTimeSheet.getLogs()", 300);
+        gwTimeSheet.getLogs();*/
+        
+        gwTimeSheet.setDates(1);
+    }
+
+    /*******************************************************************************************************
+    * Click handler for the Today button.
+    ********************************************************************************************************/
+    gwTimeSheet.clickBtnToday = function () {
+        gwTimeSheet.setDates(0);
+    }
+    /*******************************************************************************************************
+    * Set the date range
+    * @param the multiplier of the current range to move to.  Use 0 for today.
+    ********************************************************************************************************/
+    gwTimeSheet.setDates = function (n) {
+        
+        if (n == 0) {
+            var today = new Date();
+        } else {
+            var today = gwTimeSheet.startDate;
+        }
+        var day = today.getUTCDay();
+        var month = today.getMonth();
+        var year = today.getFullYear();
+        var mydate = today.getDate();
+        
+        var cstart = gwTimeSheet.startDate;
+        
+        switch (gwTimeSheet.date_mode) {
+        case 'Monthly':
+            var nm = month + n;
+            
+            gwTimeSheet.startDate = new Date(year, month + n, 1);
+            gwTimeSheet.endDate = new Date(year, month + (n+1), 0);
+            
+            gwTimeSheet.getLogs();
+            
+            break;
+        case 'Weekly':
+            var days = n * 7;
+            
+            var first = new Date(today);
+            first.setDate((mydate - day) + days);
+            
+            var last = new Date(first);
+            last.setDate(first.getDate() + 6);
+            
+            gwTimeSheet.startDate = first;
+            gwTimeSheet.endDate = last;
+            
+            gwTimeSheet.getLogs();
+            
+            break;
+        }
+    }
+    
+    
+    
+
+</script>
+<style>
+
+/*
+ * Sort arrow icon positioning
+ */
+div.DataTables_sort_wrapper {
+    position: relative;
+    padding-right: 20px;
+}
+
+
+div.DataTables_sort_wrapper span {
+    position: absolute;
+    top: 50%;
+    margin-top: -8px;
+    right: 0;
+}  
+
+th.log-col-actual div.DataTables_sort_wrapper span {
+    right: 8px;
+}
+
+    #gwTimeSheet {
+        min-height: 600px;
+    }
+
+    #pane-edit .ui-widget-content {
+        font-size: 1em;
+    }
+    
+    
+    
+    #pane-edit {
+        
+        margin-top: 3px;
+        color: #333;
+        background-image: linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -o-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -moz-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -webkit-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -ms-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        
+        background-color: rgb(250,250,250);
+        
+        box-shadow: 0px 0px 3px rgba(0,0,0,0.5);
+
+        
+        -webkit-border-radius: 8px;
+        -moz-border-radius: 8px;
+        border-radius: 8px;
+    }
+    #pane-edit.sticky {
+        position: fixed;
+        width: 280px;
+        top: 0;
+    }
+    .pane-inner {
+        padding: 0.8em;
+    }
+    #pane-edit .pane-inner {
+        border: 2px solid #1797BF;
+        -webkit-border-radius: 8px;
+        -moz-border-radius: 8px;
+        border-radius: 8px;
+        
+
+        box-shadow: 0px 0px 3px rgba(23,151,191,0.2);
+    }
+    .log-wrapper {
+        background: white;
+        padding-bottom: 0.5em;
+        
+        box-shadow: 0px 0px 3px rgba(0,0,0,0.2);
+        
+        -webkit-border-radius: 8px;
+        -moz-border-radius: 8px;
+        border-radius: 8px;
+        
+        webkit-border-top-left-radius: 0;
+        -moz-border-topleft-radius: 0;
+        border-top-left-radius: 0;
+        
+        webkit-border-top-right-radius: 0;
+        -moz-border-topright-radius: 0;
+        border-top-right-radius: 0;
+        
+        border: 1px solid #CCCCCC;
+        border-top: none;
+    }
+        
+    .pane-left {
+        width: 280px;
+        float: left;
+        left: 1em;
+        top: 0;
+        position: absolute;
+    }
+    .pane-tabs,
+    .pane-tabs li {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .pane-tabs li {
+        display: inline;
+    }
+    .pane-tab a {
+        display: inline-block;
+        
+        padding: 0.5em 1em 0.3em;
+        margin: 0.9em 0.6em 0.8em;
+        font-size: 11pt;
+        
+        border: 1px solid #fff;
+        
+        -webkit-border-radius: 8px;
+        -moz-border-radius: 8px;
+        border-radius: 8px;
+        
+        text-decoration: none;
+        
+    }
+    .pane-tab a:hover {
+        text-decoration: underline;
+    }
+    .pane-tab a.tab-active {
+        background-image: linear-gradient(bottom, rgb(23, 151, 191) 0%, rgb(151, 209, 226) 100%);
+        background-image: -o-linear-gradient(bottom, rgb(23, 151, 191) 0%, rgb(151, 209, 226) 100%);
+        background-image: -moz-linear-gradient(bottom, rgb(23, 151, 191) 0%, rgb(151, 209, 226) 100%);
+        background-image: -webkit-linear-gradient(bottom, rgb(23, 151, 191) 0%, rgb(151, 209, 226) 100%);
+        background-image: -ms-linear-gradient(bottom, rgb(23, 151, 191) 0%, rgb(151, 209, 226) 100%);
+        
+        background-color: rgb(23, 151, 191);
+        
+        box-shadow: 0px 0px 5px rgba(23,151,191,0.5);
+        
+        border-color: #1797BF;
+        
+        color: white;
+    }
+    .pane-tab a.tab-active:hover {
+        text-decoration: none;
+    }
+    
+    
+    .pane-toolbar {
+        margin-top: 3px;
+        margin-bottom: 0.7em;
+        color: #333;
+        background-image: linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -o-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -moz-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -webkit-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        background-image: -ms-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 90%);
+        
+        background-color: rgb(240,240,240); 
+        
+        border: 1px solid #CCCCCC;
+        
+        box-shadow: 0px 0px 3px rgba(0,0,0,0.2);
+        
+        -webkit-border-radius: 8px;
+        -moz-border-radius: 8px;
+        border-radius: 8px;
+        
+        padding: 0.5em 0.5em;
+    }
+    
+    .pane-left h2 {
+        font-size: 16pt;
+        text-shadow: 2px 2px 3px rgba(0,0,0, 0.3);
+        display: block;
+        padding: 1em 0;
+        
+    }
+    .gwfield {
+        
+        
+    }
+    .gwfield select,
+    .gwfield input[type="checkbox"] {
+        margin: 0.5em 0 0.1em 0;
+    }
+    .edit-log-field {
+        border-bottom: 1px solid #d8d8d8;
+        padding-left: 75px;
+        padding-bottom: 0.5em;
+        margin-bottom: 0.5em;
+    }
+    .edit-log-field label {
+        float: left;
+        width: 65px;
+        margin-left: -75px;
+        font-weight: bold;
+        text-align: right;
+        padding: 0.6em 0 0.4em 0;
+    }
+    
+    .edit-log-field input,
+    .edit-log-field textarea,
+    .gwfield input {
+        padding: 0.27em 0.25em 0.25em 0.23em;
+        
+    }
+    .edit-log-field input.clsCombo {
+        width: 140px;
+        padding-right: 0;
+    }
+    
+    .edit-log-field button .ui-button-text {
+        padding: .2em;
+    }
+    
+    .edit-log-field-split {
+        display: inline-block;
+        width: 75px;
+        margin: 0 12px 0 0;
+        text-align: center;
+        
+    }
+    .edit-log-field-split input {
+        width: 75px;
+        text-align: center;
+        margin-bottom: 0.3em;
+    }
+    
+    .edit-log-field-subLabel {
+        margin-left: 0.3em;
+    }
+    
+    .clsTxtEditNotes {
+        resize: vertical;
+        width: 170px;
+    }
+    
+    .pane-right {
+        margin-left: 300px;
+        
+    }
+    .log-list {
+        width: 100%;
+        
+    }
+    .log-list th {
+        padding: 0.4em 0.5em;
+    }
+    
+    th.ui-state-default {
+        background: none;
+        
+        background-image: linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 100%);
+        background-image: -o-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 100%);
+        background-image: -moz-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 100%);
+        background-image: -webkit-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 100%);
+        background-image: -ms-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(255,255,255) 100%);
+        
+        background-color: rgb(240,240,240);
+        
+        border: none;
+        border-top: 1px solid #D3D3D3;
+        border-bottom: 1px solid #D3D3D3;
+        border-right: 1px solid #D3D3D3;
+        color: #555555;
+        font-weight: bold;
+    }
+    
+    .ui-widget-header {
+        background: none;
+        
+        background-image: linear-gradient(bottom, rgb(230,230,230) 0%, rgb(245,245,245) 60%);
+        background-image: -o-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(245,245,245) 60%);
+        background-image: -moz-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(245,245,245) 60%);
+        background-image: -webkit-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(245,245,245) 60%);
+        background-image: -ms-linear-gradient(bottom, rgb(230,230,230) 0%, rgb(245,245,245) 60%);
+        
+        background-color: rgb(240,240,240);
+        
+        border: 1px solid #fff;
+        
+        box-shadow: 0px 0px 3px rgba(0,0,0, 0.2);
+        
+        color: #333;
+        font-weight: bold;
+        
+        padding: 1em 0.5em;
+        margin-top: 0.5em;
+    }
+    
+    
+    .log-list td {
+        padding: 0.5em 0.5em 0.3em;
+        vertical-align: top;
+    }
+    .log-list .even td {
+        background-color: #F2F2F2;
+    }
+    .log-list tr.log-highlight td {
+        background-color: #DDF0F6;
+    }
+    .log-list tr.selected td {
+        background-color: #1797BF;
+        color: white;
+    }
+    .log-list tr.selected td.log-col-actual {
+        background-color: #50B4C6;
+    }
+    .selected a {
+        color: white;
+    }
+    .selected a:hover {
+        color: white;
+        text-decoration: none;
+    }
+    .log-list td.group {
+        background-color: #777;
+        color: white;
+        font-weight: bold;
+        padding-top: 0.6em;
+    }
+    th.log-col-actual {
+        padding: 0;
+        background: #D9F2DF;
+    }
+    .log-col-actual,
+    .log-col-planned {
+        text-align: center;
+    }
+    .odd td.log-col-actual {
+        background-color: #E0F9E6;
+    }
+    .log-list .log-highlight td.log-col-actual {
+        background-color: #C5E9E0;
+    }
+    .log-col-sum-cell {
+        background-color: #E0F9E6;
+        text-align: center;
+    }
+    
+    .log-col-sum-number,
+    .log-row-group-day,
+    .log-row-group-week {
+        margin-top: 0.2em;
+        background-color: #A8C0AD;
+        display: inline-block;
+        padding: 0.2em 0.8em 0.1em;
+        color: white;
+        font-weight: bold;
+        -webkit-border-radius: 8px;
+        -moz-border-radius: 8px;
+        border-radius: 8px;
+    }
+    .log-row-group-week {
+        
+    }
+    .log-row-group-day {
+        margin-left: 0.1em;
+        background-color: #c4c4c4;
+    }
+    .log-row-week td {
+        padding-left: 0.2em;
+        padding-right: 0.2em;
+        padding-bottom: 0;
+    }
+    .log-row-week .log-col-sum-number {
+        font-size: 1.15em;
+    }
+    
+    .even td.log-col-actual {
+        background-color: #DBF4E1;
+    }
+    .log-col-id,
+    .log-col-org,
+    .log-col-project {
+        display: none;
+    }
+    th.log-col-delete {
+        border-right: none;
+    }
+    th.log-col-delete div.DataTables_sort_wrapper {
+        display: none;
+        padding: 0;
+    }
+    td.log-col-date {
+        text-align: center;
+    }
+    td.log-col-delete {
+        padding: 0.3em 0;
+        text-align: center;
+        font-size: 80%;
+    }
+    td.log-col-billable {
+    	text-align: center;
+    }
+    .edit-log-controls {
+        text-align: right;
+        font-size: 90%;
+    }
+    .edit-log-controls .clsBtnEdit {
+        margin-bottom: 0.5em;
+    }
+    
+    .pane-toolbar {
+        clear: both;
+        padding: 1em;
+    }
+    .pane-filters input {
+        font-size: 90%;
+    }
+    .pane-filters .gwfield {
+        float: left;
+        margin-right: 0.6em;
+    }
+    .pane-filters .filter-search {
+        float: right;
+        margin-right: 0;
+    }
+    
+    .date-modes {
+        display: inline-block;
+        margin-left: 2em;
+    }
+    .date-modes a {
+        display: inline-block;
+        margin-right: 0.3em;
+        padding: 0.3em 0.4em 0.2em;
+        background: transparent;
+        
+        webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+        
+    }
+    
+    .date-modes a.date-mode-active {
+        text-decoration: none;
+        background: #666;
+        color: white;
+    }
+    .date-modes a.date-mode-active:hover {
+        text-decoration: none;
+        color: white;
+    }
+    
+    .clsDateRange {
+        font-size: 1.05em;
+        font-weight: bold;
+        display: inline-block;
+        width: 140px;
+        text-align: center;
+        
+    }
+    div.pane-dates {
+        position:relative;
+        padding: 10px 0 10px 0.5em;
+        margin-bottom: 0;
+        
+        webkit-border-bottom-left-radius: 0;
+        -moz-border-bottomleft-radius: 0;
+        border-bottom-left-radius: 0;
+        
+        webkit-border-bottom-right-radius: 0;
+        -moz-border-bottomright-radius: 0;
+        border-bottom-right-radius: 0;
+        
+        border-bottom: none;
+    }
+    div.total-hours {
+        float: right;
+        position: relative;
+        margin: -10px 51px 0 0;
+        
+        top: 0; 
+        
+        font-size: 16pt;
+        font-weight: bold;
+        width: 111px;
+        line-height: 53px;
+        text-align: center;
+        border-right: 1px solid #E1E1E1;
+        border-left: 1px solid #E1E1E1;
+        
+        background-image: linear-gradient(bottom, #ABE3B9 0%, #fff 100%);
+        background-image: -o-linear-gradient(bottom, #ABE3B9 0%, #fff 100%);
+        background-image: -moz-linear-gradient(bottom, #ABE3B9 0%, #fff 100%);
+        background-image: -webkit-linear-gradient(bottom, #ABE3B9 0%, #fff 100%);
+        background-image: -ms-linear-gradient(bottom, #ABE3B9 0%, #fff 100%);
+        
+        background-color: #ABE3B9;
+    }
+    
+    h3.pane-title {
+        margin: 0;
+        margin-right: 0.5em;
+        padding: 0.4em;
+        float: left;
+    }
+    
+    #noresults {
+        
+        font-size: 16pt;
+        font-weight: bold;
+        font-style: italic;
+        color: #999;
+        
+        padding: 5em;
+    }
+    
+    #projectedSum {
+        float: right;
+        width: 215px;
+        
+        margin-right: 10px;
+        
+    }
+    .projected-hours {
+        background-image: linear-gradient(bottom, rgb(151, 209, 226) 0%, rgb(23, 151, 191) 100%);
+        background-image: -o-linear-gradient(bottom, rgb(151, 209, 226) 0%, rgb(23, 151, 191) 100%);
+        background-image: -moz-linear-gradient(bottom, rgb(151, 209, 226) 0%, rgb(23, 151, 191) 100%);
+        background-image: -webkit-linear-gradient(bottom, rgb(151, 209, 226) 0%, rgb(23, 151, 191) 100%);
+        background-image: -ms-linear-gradient(bottom, rgb(151, 209, 226) 0%, rgb(23, 151, 191) 100%);
+        
+        background-color: rgb(151, 209, 226);
+        
+        border: 1px solid #38A6C8;
+        
+        display: block;
+        float: right;
+        
+        font-size: 16pt;
+        color: white;
+        margin-top: -6px;
+        line-height: 38px;
+        padding: 0.1em 0.8em;
+        
+        webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+    }
+    .projected-desc {
+        font-size: 0.95em;
+        line-height: 1.5em;
+    }
+    
+    .clear {
+        clear:both;
+    }
+</style>    
+    <div id="gwTimeSheet">
+    <div class="pane-right">
+        
+        <div class="pane-toolbar pane-filters ui-corner-all">
+            <h3 class="pane-title">Filter</h3>
+            <div class="gwfield filter-auto filter-organization">
+                <input class="ui-widget ui-widget-content ui-corner-all click-label" title="By Organization" type="text" id="filterOrganization" />              
+            </div>
+            <div class="gwfield filter-auto filter-project">
+                <input class="ui-widget ui-widget-content ui-corner-all click-label" title="By Project" type="text" id="filterProject" />               
+            </div>
+            <div class="gwfield filter-auto filter-role">
+                <input class="ui-widget ui-widget-content ui-corner-all click-label" title="By Role" type="text" id="filterRole" />             
+            </div>
+            <div class="gwfield filter-auto filter-phase">
+                <input class="ui-widget ui-widget-content ui-corner-all click-label" title="By Phase" type="text" id="filterPhase" />               
+            </div>
+            <div class="gwfield filter-search">
+                <input class="ui-widget ui-widget-content ui-corner-all click-label" title="Search All" type="text" id="filterSearch" />                
+            </div>
+            
+            <div class="clear"></div>
+        </div>
+        
+        <div id="logDates" class="pane-toolbar pane-dates ui-corner-top">
+            
+            <button id="btnPrevious" onclick="gwTimeSheet.clickBtnPrevious();">&nbsp;</button><span id="dateRange" class="clsDateRange"></span>
+            <button id="btnNext" onclick="gwTimeSheet.clickBtnNext();">&nbsp;</button>
+            <button id="btnToday" onclick="gwTimeSheet.clickBtnToday();">today</button>
+            
+            
+            <div class="date-modes">
+                <input class="date-mode date-mode-monthly" type="radio" id="date-mode-monthly" data-date_mode="Monthly" name="date-mode" /><label for="date-mode-monthly">Month</label>
+                <input class="date-mode date-mode-weekly"  type="radio" id="date-mode-weekly" data-date_mode="Weekly" name="date-mode" /><label for="date-mode-weekly">Week</label>
+            </div>
+            
+            <div class="total-hours"></div>
+            <div id="projectedSum"><span class="projected-hours"></span><span class="projected-desc">Total projected time in this time period (ignores filters).</span></div>
+        </div>
+    
+        <div id="divLogs" class="log-wrapper" >
+            <div id="noresults">You haven't entered any log entries for this time period ... yet.</div>
+        </div>
+        
+    </div>
+    
+    <apex:include pageName="TimesheetEdit" />
+
+    </div>
+    
+</apex:page>
