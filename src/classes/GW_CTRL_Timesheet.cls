@@ -8,7 +8,7 @@
 * Written by Dave Habib, copyright (c) 2011 Groundwire
 * This program is released under the GNU Affero General Public License, Version 3. http://www.gnu.org/licenses/
 ********************************************************************************************************/
-global with sharing class GW_CTRL_Timesheet {
+global without sharing class GW_CTRL_Timesheet {
 
         private static ID rtIdProject = GW_RecTypes.GetRecordTypeId('Opportunity', 'Consulting Project - Hourly');
         public static list<string> EXCLUDED_STAGES_FOR_TIMETRACKING = new list<string>{'Prospecting','Planning','Closure','Terminated','Application Review','Locked'};

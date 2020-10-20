@@ -3,6 +3,8 @@
     <types>
         <members>GW_CTRL_Timesheet</members>
         <members>GW_RecTypes</members>
+        <members>dlrs_CampaignMemberTest</members>
+        <members>volSkillsSearchTestClass</members>
         <name>ApexClass</name>
     </types>
     <types>
