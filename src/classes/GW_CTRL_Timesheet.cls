@@ -115,14 +115,17 @@ global without sharing class GW_CTRL_Timesheet {
         * @return list<Project_Role__c>, which will be turned into a Javascript collection.
         ********************************************************************************************************/
     @RemoteAction global static list<Project_Role__c> getListTasks(string projectId, boolean isAdHoc, string strFilter) {
+
         if ((projectId == null || projectId == '') && !isAdHoc) return null;
+
         strFilter = '%' + strFilter + '%';   
-        list<Project_Role__c> listTasks = [select Id, Name from Project_Role__c where 
-                        Project__c = :projectId and Active__c = true and 
-                                Name like :strFilter 
-                                order by Name asc];
+        list<Project_Role__c> listTasks = [
+                SELECT Id, Name, Remaining_Hours__c
+                FROM Project_Role__c
+                WHERE Project__c = :projectId AND Active__c = true AND Name LIKE :strFilter 
+                ORDER BY Name asc];
                         
-                return listTasks;
+        return listTasks;
     }   
 
         /*******************************************************************************************************

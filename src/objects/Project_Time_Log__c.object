@@ -445,6 +445,19 @@ false)</formula>
         <type>Checkbox</type>
     </fields>
     <fields>
+        <fullName>TimeLog_Import_ID__c</fullName>
+        <caseSensitive>true</caseSensitive>
+        <description>Use as an external ID for a data import task. Okay to overwrite for another import.</description>
+        <externalId>true</externalId>
+        <inlineHelpText>Use as an external ID for a data import task. Okay to overwrite for another import.</inlineHelpText>
+        <label>Import ID</label>
+        <length>18</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>true</unique>
+    </fields>
+    <fields>
         <fullName>Time_Log_Description__c</fullName>
         <externalId>false</externalId>
         <inlineHelpText>Narrative description for this time log entry</inlineHelpText>
@@ -619,20 +632,19 @@ Log_Amount__c )</formula>
         <filters>
             <field>Date__c</field>
             <operation>equals</operation>
-            <value>LAST_YEAR</value>
+            <value>THIS_YEAR</value>
         </filters>
         <filters>
             <field>Project__c</field>
             <operation>contains</operation>
-            <value>DS Team Unbillable</value>
+            <value>SCS</value>
         </filters>
         <filters>
-            <field>Staff_Person_First_Name__c</field>
+            <field>Project_Role__c</field>
             <operation>equals</operation>
-            <value>Crystal</value>
+            <value>Credited Hours</value>
         </filters>
         <label>Time Logs This Month (Crystal)</label>
-        <language>en_US</language>
     </listViews>
     <listViews>
         <fullName>Unbillable_DS_Time_Logs_Last_Month</fullName>

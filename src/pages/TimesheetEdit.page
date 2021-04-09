@@ -273,7 +273,7 @@
 	   					j$("#txtTasks").val(item.Name).data('Id', item.Id);
 	   					isMatch = true;
 	   				}
-       				return {label: item.Name, value: item.Id}
+       				return {label: item.Name + ' (' + item.Remaining_Hours__c.toString() + ')', value: item.Id}
    				}
    			}));
 
