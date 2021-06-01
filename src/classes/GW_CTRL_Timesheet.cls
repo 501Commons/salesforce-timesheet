@@ -119,12 +119,51 @@ global without sharing class GW_CTRL_Timesheet {
         if ((projectId == null || projectId == '') && !isAdHoc) return null;
 
         strFilter = '%' + strFilter + '%';   
-        list<Project_Role__c> listTasks = [
-                SELECT Id, Name, Remaining_Hours__c
+
+        Map<Id, Decimal> aggregateTimeLogs = new Map<Id, Decimal>();
+        for (Project_Time_Log__c projectTimeLog :[
+                SELECT Actual_Hours__c, Project__c 
+                FROM Project_Time_Log__c 
+                WHERE Date__c = THIS_MONTH]) {
+
+                Decimal aggregateHours = projectTimeLog.Actual_Hours__c;
+
+                if (aggregateTimeLogs.containsKey(projectTimeLog.Project__c)) {
+                        aggregateHours += aggregateTimeLogs.remove(projectTimeLog.Project__c);
+                }
+
+                aggregateTimeLogs.put(projectTimeLog.Project__c, aggregateHours);
+        }
+
+        List<Project_Role__c> listTasks = new List<Project_Role__c>();
+        for (Project_Role__c projectRole :[
+                SELECT Id, Name, Remaining_Hours__c, Project__r.Type, Project__r.DS_Maximum_Maintenance_Hours_per_Month__c, Project__r.Hours_per_Month__c
                 FROM Project_Role__c
                 WHERE Project__c = :projectId AND Active__c = true AND Name LIKE :strFilter 
-                ORDER BY Name asc];
-                        
+                ORDER BY Name ASC]) {
+
+                // Maintenance Project then calculate how much time left based on this month
+                //
+                if (!String.isBlank(projectRole.Project__r.Type) && projectRole.Project__r.Type.containsIgnoreCase('Maintenance')) {
+
+                        Decimal hoursLeft = projectRole.Project__r.DS_Maximum_Maintenance_Hours_per_Month__c;
+                        if (projectRole.Project__r.Hours_per_Month__c > 0) {
+                                hoursLeft = projectRole.Project__r.Hours_per_Month__c;
+                        }
+
+                        if (aggregateTimeLogs.containsKey(projectRole.Project__c)) {
+                                hoursLeft -= aggregateTimeLogs.get(projectRole.Project__c);
+                        }
+
+                        projectRole.Project__r.Hours_per_Month__c = hoursLeft;
+                } else {
+
+                        projectRole.Project__r.Hours_per_Month__c = projectRole.Remaining_Hours__c;
+                }
+                
+                listTasks.add(projectRole);
+        } 
+
         return listTasks;
     }   
 

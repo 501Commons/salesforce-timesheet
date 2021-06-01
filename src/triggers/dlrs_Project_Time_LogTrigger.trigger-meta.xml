@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ApexTrigger xmlns="http://soap.sforce.com/2006/04/metadata">
-    <apiVersion>37.0</apiVersion>
+    <apiVersion>48.0</apiVersion>
     <packageVersions>
         <majorNumber>2</majorNumber>
-        <minorNumber>9</minorNumber>
+        <minorNumber>12</minorNumber>
         <namespace>dlrs</namespace>
     </packageVersions>
     <status>Active</status>

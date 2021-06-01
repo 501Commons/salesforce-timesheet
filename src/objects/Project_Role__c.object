@@ -462,6 +462,20 @@
         <type>Currency</type>
     </fields>
     <label>Project Role</label>
+    <listViews>
+        <fullName>All</fullName>
+        <columns>NAME</columns>
+        <columns>Active__c</columns>
+        <columns>Project__c</columns>
+        <columns>Actual_Amount__c</columns>
+        <columns>Actual_Hours__c</columns>
+        <columns>Budgeted_Amount__c</columns>
+        <columns>Budgeted_Hours__c</columns>
+        <columns>Remaining_Hours__c</columns>
+        <columns>Role__c</columns>
+        <filterScope>Everything</filterScope>
+        <label>All</label>
+    </listViews>
     <nameField>
         <label>Project Role Name</label>
         <trackHistory>false</trackHistory>
@@ -474,13 +488,21 @@
         <lookupDialogsAdditionalFields>Remaining_Hours__c</lookupDialogsAdditionalFields>
         <lookupDialogsAdditionalFields>Actual_Hours__c</lookupDialogsAdditionalFields>
         <lookupDialogsAdditionalFields>Budgeted_Hours__c</lookupDialogsAdditionalFields>
+        <searchResultsAdditionalFields>Project__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Active__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Actual_Amount__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Actual_Hours__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Budgeted_Amount__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Budgeted_Hours__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Remaining_Amount__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Remaining_Hours__c</searchResultsAdditionalFields>
     </searchLayouts>
     <sharingModel>ControlledByParent</sharingModel>
     <validationRules>
         <fullName>Prepaid_time_exceeded</fullName>
         <active>true</active>
         <description>Actual prepaid time may not exceed budgeted hours</description>
-        <errorConditionFormula>AND(CONTAINS( Name , &quot;repaid&quot;), (  Actual_Hours__c &gt;  Budgeted_Hours__c  ))</errorConditionFormula>
+        <errorConditionFormula>AND(CONTAINS( Name , &quot;repaid&quot;), (  Actual_Hours__c &gt;  Budgeted_Hours__c  ), YEAR(DATEVALUE(CreatedDate))&gt;2019  )</errorConditionFormula>
         <errorMessage>Prepaid actual hours may not exceed budgeted hours.</errorMessage>
     </validationRules>
     <visibility>Public</visibility>
