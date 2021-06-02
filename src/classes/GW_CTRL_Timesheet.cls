@@ -137,7 +137,7 @@ global without sharing class GW_CTRL_Timesheet {
 
         List<Project_Role__c> listTasks = new List<Project_Role__c>();
         for (Project_Role__c projectRole :[
-                SELECT Id, Name, Remaining_Hours__c, Project__r.Type, Project__r.DS_Maximum_Maintenance_Hours_per_Month__c, Project__r.Hours_per_Month__c
+                SELECT Id, Name, Description__c, Remaining_Hours__c, Project__r.Type, Project__r.DS_Maximum_Maintenance_Hours_per_Month__c, Project__r.Hours_per_Month__c
                 FROM Project_Role__c
                 WHERE Project__c = :projectId AND Active__c = true AND Name LIKE :strFilter 
                 ORDER BY Name ASC]) {
@@ -155,10 +155,10 @@ global without sharing class GW_CTRL_Timesheet {
                                 hoursLeft -= aggregateTimeLogs.get(projectRole.Project__c);
                         }
 
-                        projectRole.Project__r.Hours_per_Month__c = hoursLeft;
+                        projectRole.Description__c = String.valueOf(hoursLeft);
                 } else {
 
-                        projectRole.Project__r.Hours_per_Month__c = projectRole.Remaining_Hours__c;
+                        projectRole.Description__c = String.valueOf(projectRole.Remaining_Hours__c);
                 }
                 
                 listTasks.add(projectRole);
